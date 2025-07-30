@@ -1,6 +1,8 @@
+import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import {ThemeProvider, createTheme} from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import HomePage from "./pages/Home"
+import Editor from "@/pages/Editor.tsx";
 
 const theme = createTheme({
     palette: {
@@ -56,11 +58,18 @@ const theme = createTheme({
 
 function App() {
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline/>
-            <HomePage/>
-        </ThemeProvider>
-    )
+
+
+    <ThemeProvider theme={theme}>
+        <CssBaseline/>
+         <Router>
+            <Routes>
+                <Route path="/" element={<HomePage/>}/>
+                <Route path="/workspace/:id" element={<Editor/>}/>
+            </Routes>
+        </Router>
+    </ThemeProvider>
+)
 }
 
 export default App
