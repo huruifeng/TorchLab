@@ -32,6 +32,8 @@ import {
     BookOpen,
 } from "lucide-react"
 
+import TorchLabIcon from "@/components/TorchLabIcon"
+
 interface Workspace {
     id: string
     name: string
@@ -131,10 +133,10 @@ export default function HomePage() {
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                            <div
-                                className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                                <Brain className="w-6 h-6 text-white"/>
-                            </div>
+                            {/*<div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">*/}
+                            {/*    <Brain className="w-6 h-6 text-white"/>*/}
+                            {/*</div>*/}
+                            <TorchLabIcon size={48} />
                             <div>
                                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                     TorchLab
