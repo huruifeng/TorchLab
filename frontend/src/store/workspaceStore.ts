@@ -2,6 +2,7 @@
 import {create} from 'zustand'
 import {nanoid} from 'nanoid'
 import axios from 'axios'
+import {getFormattedDateTime} from "@/lib/utils.ts";
 
 const BASE_URL = 'http://localhost:8000'
 const WS_URL = `${BASE_URL}/workspaces`
@@ -21,7 +22,9 @@ interface WorkspaceStore {
     setWorkspaces: (workspaces: Workspace[]) => void
     getWorkspaces: () => Promise<Workspace[]>
     createWorkspace: (name: string, description: string, modelType: string) => Promise<string>
-    removeWorkspace: (id: string) => void
+    removeWorkspace: (id: string) => Promise<void>
+    copyWorkspace: (id: string) => Promise<void>
+    editWorkspace: (id: string, name: string, description: string, modelType: string) => Promise<void>
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
@@ -30,6 +33,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
     getWorkspaces: async () => {
         try {
             const { data } = await axios.get(`${WS_URL}/getws`)
+            console.log(data)
             if (data.success) {
                 set(() => ({
                     workspaces: data.workspaces,
@@ -47,8 +51,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
             id: nanoid(),
             name,
             description: description,
-            createdAt: new Date().toISOString(),
-            lastModified: new Date().toISOString(),
+            createdAt: getFormattedDateTime(),
+            lastModified: getFormattedDateTime(),
             modelType: modelType,
             status: "Draft",
         }
@@ -69,9 +73,47 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
         }
 
     },
-    removeWorkspace: (id) => {
-        set((state) => ({
-            workspaces: state.workspaces.filter((ws) => ws.id !== id),
-        }))
+    removeWorkspace: async (id) => {
+        try {
+            const { data } = await axios.delete(`${WS_URL}/deletews/${id}`)
+            if (data.success) {
+                set((state) => ({
+                    workspaces: state.workspaces.filter((ws) => ws.id !== id),
+                }))
+            }
+
+        } catch (error) {
+            console.error('Failed to delete workspace', error)
+        }
+    },
+    copyWorkspace: async (id: string) => {
+        try {
+            const { data } = await axios.get(`${WS_URL}/copyws/${id}`)
+            if (data.success) {
+                set((state) => ({
+                    workspaces: [...state.workspaces, data.workspace],
+                }))
+            }
+        } catch (error) {
+            console.error('Failed to copy workspace', error)
+        }
+    },
+
+    editWorkspace: async (id: string, name: string, description: string, modelType: string) => {
+        try {
+            const { data } = await axios.put(`${WS_URL}/editws/${id}`, { name, description, modelType })
+            if (data.success) {
+                set((state) => ({
+                    workspaces: state.workspaces.map((ws) => {
+                        if (ws.id === id) {
+                            return { ...ws, name, description, modelType }
+                        }
+                        return ws
+                    }),
+                }))
+            }
+        } catch (error) {
+            console.error('Failed to edit workspace', error)
+        }
     },
 }))

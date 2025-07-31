@@ -2,7 +2,6 @@
 
 import {useEffect, useState} from "react"
 import {useNavigate} from "react-router-dom";
-import {nanoid} from "nanoid";
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {
@@ -29,7 +28,21 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {Separator} from "@/components/ui/separator"
-import {Plus, Zap, Code, BarChart3, Play, Calendar, Clock, Trash2, Copy, Blocks, Images, Newspaper,} from "lucide-react"
+import {
+    Plus,
+    Zap,
+    Code,
+    BarChart3,
+    Play,
+    Calendar,
+    Clock,
+    Trash2,
+    Copy,
+    Blocks,
+    Images,
+    Newspaper,
+    Edit2,
+} from "lucide-react"
 import TorchLabIcon from "@/components/TorchLabIcon"
 import {AppSidebar} from "@/components/AppSidebar"
 
@@ -45,39 +58,10 @@ interface Workspace {
 const modelTypes = ["DNN", "CNN", "RNN", "Transformer", "Custom"]
 
 export default function HomePage() {
-    // const [workspaces, setWorkspaces] = useState<Workspace[]>([
-    //     {
-    //         id: "1",
-    //         name: "Image Classification Model",
-    //         description: "CNN for CIFAR-10 dataset classification",
-    //         createdAt: "2024-01-15",
-    //         lastModified: "2024-01-20",
-    //         modelType: "CNN",
-    //         status: "Completed",
-    //     },
-    //     {
-    //         id: "2",
-    //         name: "Text Sentiment Analysis",
-    //         description: "LSTM model for sentiment classification",
-    //         createdAt: "2024-01-18",
-    //         lastModified: "2024-01-19",
-    //         modelType: "RNN",
-    //         status: "Training",
-    //     },
-    //     {
-    //         id: "3",
-    //         name: "Language Translation",
-    //         description: "Transformer model for EN-ZH translation",
-    //         createdAt: "2024-01-20",
-    //         lastModified: "2024-01-20",
-    //         modelType: "Transformer",
-    //         status: "Draft",
-    //     },
-    // ])
 
     const navigate = useNavigate()
 
-    const {workspaces, setWorkspaces, getWorkspaces, createWorkspace, removeWorkspace} = useWorkspaceStore()
+    const {workspaces, setWorkspaces, getWorkspaces, createWorkspace, removeWorkspace, copyWorkspace, editWorkspace} = useWorkspaceStore()
 
     useEffect(() => {
         const fetchWorkspaces = async () => {
@@ -108,8 +92,16 @@ export default function HomePage() {
         }
     }
 
-    const handleRemoveWorkspace = (id: string) => {
+    const handleDeleteWorkspace = (id: string) => {
         removeWorkspace(id)
+    }
+
+    const handleCopyWorkspace = (id: string) => {
+        copyWorkspace(id)
+    }
+
+    const handleEditWorkspace = (id: string, name: string, description: string, modelType: string) => {
+        editWorkspace(id, name, description, modelType)
     }
 
     const getStatusVariant = (status: string) => {
@@ -234,8 +226,7 @@ export default function HomePage() {
                                         <DialogContent className="sm:max-w-[425px]">
                                             <DialogHeader>
                                                 <DialogTitle>Create New Workspace</DialogTitle>
-                                                <DialogDescription>Start building your neural network with a new
-                                                    workspace.</DialogDescription>
+                                                <DialogDescription>Start building your neural network with a new workspace.</DialogDescription>
                                             </DialogHeader>
                                             <div className="grid gap-4 py-4">
                                                 <div className="grid grid-cols-4 items-center gap-4">
@@ -302,26 +293,25 @@ export default function HomePage() {
                                 </div>
 
                                 {/* Workspaces Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
                                     {workspaces.map((ws) => (
-                                        <Card key={ws.id}
-                                              className="hover:shadow-lg transition-shadow cursor-pointer group">
+                                        <Card key={ws.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
                                             <CardHeader className="pb-3">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <CardTitle
-                                                            className="text-lg group-hover:text-blue-600 transition-colors">
+                                                        <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
                                                             {ws.name}
                                                         </CardTitle>
-                                                        <CardDescription
-                                                            className="mt-1">{ws.description}</CardDescription>
+                                                        <CardDescription className="mt-1">{ws.description}</CardDescription>
                                                     </div>
-                                                    <div
-                                                        className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button variant="ghost" size="sm">
-                                                            <Copy className="w-4 h-4"/>
+                                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleEditWorkspace(ws.id, ws.name, ws.description, ws.modelType)}>
+                                                            <Edit2 className="w-1 h-1"/>
                                                         </Button>
-                                                        <Button variant="ghost" size="sm">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleCopyWorkspace(ws.id)}>
+                                                            <Copy className="w-1 h-1"/>
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => handleDeleteWorkspace(ws.id)}>
                                                             <Trash2 className="w-4 h-4"/>
                                                         </Button>
                                                     </div>
@@ -330,8 +320,7 @@ export default function HomePage() {
                                             <CardContent>
                                                 <div className="flex items-center justify-between mb-4">
                                                     <div className="flex space-x-2">
-                                                        <Badge
-                                                            variant={getModelTypeVariant(ws.modelType)}>{ws.modelType}</Badge>
+                                                        <Badge variant={getModelTypeVariant(ws.modelType)}>{ws.modelType}</Badge>
                                                         <Badge variant={getStatusVariant(ws.status)}>{ws.status}</Badge>
                                                     </div>
                                                 </div>
@@ -339,19 +328,16 @@ export default function HomePage() {
                                                 <div
                                                     className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                                                     <div className="flex items-center">
-                                                        <Calendar className="w-4 h-4 mr-1"/>
-                                                        {ws.createdAt}
+                                                        <Calendar className="w-4 h-4 mr-1"/>{ws.createdAt}
                                                     </div>
                                                     <div className="flex items-center">
-                                                        <Clock className="w-4 h-4 mr-1"/>
-                                                        {ws.lastModified}
+                                                        <Clock className="w-4 h-4 mr-1"/>{ws.lastModified}
                                                     </div>
                                                 </div>
 
                                                 <Button className="w-full bg-transparent" variant="outline"
                                                         onClick={() => navigate(`/workspace/${ws.id}`)}>
-                                                    <Play className="w-4 h-4 mr-2"/>
-                                                    Open Workspace
+                                                    <Play className="w-4 h-4 mr-2"/>Open Workspace
                                                 </Button>
                                             </CardContent>
                                         </Card>
@@ -363,10 +349,8 @@ export default function HomePage() {
                                         onClick={() => setIsCreateDialogOpen(true)}
                                     >
                                         <CardContent className="flex flex-col items-center justify-center h-full py-12">
-                                            <div
-                                                className="w-16 h-16 bg-gray-100 group-hover:bg-blue-50 rounded-full flex items-center justify-center mb-4 transition-colors">
-                                                <Plus
-                                                    className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors"/>
+                                            <div className="w-16 h-16 bg-gray-100 group-hover:bg-blue-50 rounded-full flex items-center justify-center mb-4 transition-colors">
+                                                <Plus className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors"/>
                                             </div>
                                             <h3 className="text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors mb-2">
                                                 Create New Workspace
