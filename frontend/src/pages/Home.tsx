@@ -2,6 +2,7 @@
 
 import {useState} from "react"
 import {useNavigate} from "react-router-dom";
+import {nanoid} from "nanoid";
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {
@@ -17,6 +18,7 @@ import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
 import {Badge} from "@/components/ui/badge"
 import {Textarea} from "@/components/ui/textarea"
+import {Select,SelectTrigger, SelectValue, SelectContent, SelectItem} from "@/components/ui/select"
 import {SidebarInset, SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar"
 import {
     Breadcrumb,
@@ -51,9 +53,10 @@ interface Workspace {
     description: string
     createdAt: string
     lastModified: string
-    modelType: "CNN" | "RNN" | "Transformer" | "Custom"
-    status: "Draft" | "Training" | "Completed"
+    modelType: string
+    status: string
 }
+const modelTypes = ["DNN", "CNN", "RNN", "Transformer", "Custom"]
 
 export default function HomePage() {
     const [workspaces, setWorkspaces] = useState<Workspace[]>([
@@ -90,22 +93,23 @@ export default function HomePage() {
     const [newWorkspace, setNewWorkspace] = useState({
         name: "",
         description: "",
+        modelType: "",
     })
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
     const handleCreateWorkspace = () => {
         if (newWorkspace.name.trim()) {
             const workspace: Workspace = {
-                id: Date.now().toString(),
+                id: nanoid(),
                 name: newWorkspace.name,
                 description: newWorkspace.description,
                 createdAt: new Date().toISOString().split("T")[0],
                 lastModified: new Date().toISOString().split("T")[0],
-                modelType: "Custom",
+                modelType: newWorkspace.modelType,
                 status: "Draft",
             }
             setWorkspaces([workspace, ...workspaces])
-            setNewWorkspace({name: "", description: ""})
+            setNewWorkspace({name: "", description: "", modelType: "Custom"})
             setIsCreateDialogOpen(false)
         }
     }
@@ -252,9 +256,7 @@ export default function HomePage() {
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="description" className="text-right">
-                                                        Description
-                                                    </Label>
+                                                    <Label htmlFor="description" className="text-right">Description</Label>
                                                     <Textarea
                                                         id="description"
                                                         value={newWorkspace.description}
@@ -267,12 +269,30 @@ export default function HomePage() {
                                                         rows={3}
                                                     />
                                                 </div>
+                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                    <Label htmlFor="description" className="text-right">Model Type</Label>
+                                                    <Select
+                                                        value={newWorkspace.modelType}
+                                                        onValueChange={(value) => setNewWorkspace({
+                                                            ...newWorkspace,
+                                                            modelType: value
+                                                        })}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select model type"/>
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {modelTypes.map((modelType) => (
+                                                                <SelectItem key={modelType} value={modelType}>
+                                                                    {modelType}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
                                             <DialogFooter>
-                                                <Button
-                                                    onClick={handleCreateWorkspace}
-                                                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                                                >
+                                                <Button onClick={handleCreateWorkspace} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                                                     Create Workspace
                                                 </Button>
                                             </DialogFooter>
@@ -334,15 +354,12 @@ export default function HomePage() {
                                     ))}
 
                                     {/* Create New Workspace Card */}
-                                    <Card
-                                        className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer group"
+                                    <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer group"
                                         onClick={() => setIsCreateDialogOpen(true)}
                                     >
                                         <CardContent className="flex flex-col items-center justify-center h-full py-12">
-                                            <div
-                                                className="w-16 h-16 bg-gray-100 group-hover:bg-blue-50 rounded-full flex items-center justify-center mb-4 transition-colors">
-                                                <Plus
-                                                    className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors"/>
+                                            <div className="w-16 h-16 bg-gray-100 group-hover:bg-blue-50 rounded-full flex items-center justify-center mb-4 transition-colors">
+                                                <Plus className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors"/>
                                             </div>
                                             <h3 className="text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors mb-2">
                                                 Create New Workspace
