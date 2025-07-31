@@ -78,6 +78,14 @@ export default function HomePage() {
     })
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
+    const [toEditWorkspace, setToEditWorkspace] = useState({
+        id: "",
+        name: "",
+        description: "",
+        modelType: "",
+    })
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
     const handleCreateWorkspace = () => {
         if (newWorkspace.name.trim()) {
             const workspace: Workspace = {
@@ -101,6 +109,7 @@ export default function HomePage() {
     }
 
     const handleEditWorkspace = (id: string, name: string, description: string, modelType: string) => {
+        setIsEditDialogOpen(false)
         editWorkspace(id, name, description, modelType)
     }
 
@@ -163,8 +172,7 @@ export default function HomePage() {
                                     Visually</h2>
                                 <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
                                     Drag, drop, and connect PyTorch modules to create powerful deep learning models. No
-                                    coding required -
-                                    just pure visual creativity.
+                                    coding required - just pure visual creativity.
                                 </p>
 
                                 {/* Feature highlights */}
@@ -212,15 +220,12 @@ export default function HomePage() {
                                 <div className="flex items-center justify-between mb-6">
                                     <div>
                                         <h3 className="text-2xl font-bold text-gray-900">Your Workspaces</h3>
-                                        <p className="text-muted-foreground">Create and manage your deep learning
-                                            projects</p>
+                                        <p className="text-muted-foreground">Create and manage your deep learning projects</p>
                                     </div>
                                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                                         <DialogTrigger asChild>
-                                            <Button
-                                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                                                <Plus className="w-4 h-4 mr-2"/>
-                                                New Workspace
+                                            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                                                <Plus className="w-4 h-4 mr-2"/>New Workspace
                                             </Button>
                                         </DialogTrigger>
                                         <DialogContent className="sm:max-w-[425px]">
@@ -230,9 +235,7 @@ export default function HomePage() {
                                             </DialogHeader>
                                             <div className="grid gap-4 py-4">
                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="name" className="text-right">
-                                                        Name
-                                                    </Label>
+                                                    <Label htmlFor="name" className="text-right">Name</Label>
                                                     <Input
                                                         id="name"
                                                         value={newWorkspace.name}
@@ -245,8 +248,7 @@ export default function HomePage() {
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="description"
-                                                           className="text-right">Description</Label>
+                                                    <Label htmlFor="description" className="text-right">Description</Label>
                                                     <Textarea
                                                         id="description"
                                                         value={newWorkspace.description}
@@ -283,14 +285,71 @@ export default function HomePage() {
                                                 </div>
                                             </div>
                                             <DialogFooter>
-                                                <Button onClick={handleCreateWorkspace}
-                                                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                                                <Button onClick={handleCreateWorkspace} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                                                     Create Workspace
                                                 </Button>
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
                                 </div>
+
+                                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                                    <DialogContent className="sm:max-w-[425px]">
+                                        <DialogHeader>
+                                            <DialogTitle>Edit Workspace</DialogTitle>
+                                            <DialogDescription>Update the details of your workspace.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="name" className="text-right">Name</Label>
+                                                <Input id="name" value={toEditWorkspace.name}
+                                                    onChange={(e) => setToEditWorkspace({
+                                                        ...toEditWorkspace,
+                                                        name: e.target.value
+                                                    })}
+                                                    className="col-span-3"
+                                                    placeholder="My Neural Network"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="description" className="text-right">Description</Label>
+                                                <Textarea
+                                                    id="description"
+                                                    value={toEditWorkspace.description}
+                                                    onChange={(e) => setToEditWorkspace({
+                                                        ...toEditWorkspace,
+                                                        description: e.target.value
+                                                    })}
+                                                    className="col-span-3"
+                                                    placeholder="Brief description of your project"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="description" className="text-right">Model Type</Label>
+                                                <Select
+                                                    value={toEditWorkspace.modelType}
+                                                    onValueChange={(value) => setToEditWorkspace({
+                                                        ...toEditWorkspace,
+                                                        modelType: value
+                                                    })}
+                                                >
+                                                    <SelectTrigger><SelectValue placeholder="Select model type"/></SelectTrigger>
+                                                    <SelectContent>
+                                                        {modelTypes.map((modelType) => (
+                                                            <SelectItem key={modelType} value={modelType} >{modelType}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button onClick={() => handleEditWorkspace(toEditWorkspace.id, toEditWorkspace.name, toEditWorkspace.description, toEditWorkspace.modelType)} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                                                Update Workspace
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
 
                                 {/* Workspaces Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
@@ -305,7 +364,16 @@ export default function HomePage() {
                                                         <CardDescription className="mt-1">{ws.description}</CardDescription>
                                                     </div>
                                                     <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button variant="ghost" size="sm" onClick={() => handleEditWorkspace(ws.id, ws.name, ws.description, ws.modelType)}>
+                                                        <Button variant="ghost" size="sm"
+                                                                onClick={() => {
+                                                                    setToEditWorkspace({
+                                                                        id: ws.id,
+                                                                        name: ws.name,
+                                                                        description: ws.description,
+                                                                        modelType: ws.modelType
+                                                                    })
+                                                                    setIsEditDialogOpen(true)
+                                                                }}>
                                                             <Edit2 className="w-1 h-1"/>
                                                         </Button>
                                                         <Button variant="ghost" size="sm" onClick={() => handleCopyWorkspace(ws.id)}>
@@ -344,8 +412,7 @@ export default function HomePage() {
                                     ))}
 
                                     {/* Create New Workspace Card */}
-                                    <Card
-                                        className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer group"
+                                    <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer group"
                                         onClick={() => setIsCreateDialogOpen(true)}
                                     >
                                         <CardContent className="flex flex-col items-center justify-center h-full py-12">

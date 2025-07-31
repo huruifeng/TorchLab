@@ -1,13 +1,12 @@
 from sqlmodel import SQLModel, Field, Relationship
 import nanoid
-from datetime import date
-
+from datetime import datetime
 
 class WorkspaceBase(SQLModel):
     name: str = Field(default="My Workspace")
     description: str = Field(default="My Workspace Description")
-    createdAt: str = Field(default_factory=lambda: date.today().isoformat())
-    lastModified: str = Field(default_factory=lambda: date.today().isoformat())
+    createdAt: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    lastModified: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     modelType: str = Field(default="Custom")
     status: str = Field(default="Draft")
 
@@ -28,3 +27,6 @@ class Workspace(WorkspaceBase, table=True):
 
     def get_status(self):
         return self.status
+
+    def __str__(self):
+        return f"Workspace: {self.id} - {self.name} - {self.description} - {self.modelType} - {self.status}"

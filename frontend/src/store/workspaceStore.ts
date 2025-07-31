@@ -106,7 +106,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
                 set((state) => ({
                     workspaces: state.workspaces.map((ws) => {
                         if (ws.id === id) {
-                            return { ...ws, name, description, modelType }
+                            return { ...ws, name, description, modelType, lastModified: getFormattedDateTime() }
                         }
                         return ws
                     }),

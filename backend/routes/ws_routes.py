@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import nanoid
 from fastapi import APIRouter, HTTPException, Depends
 from backend.db import engine
@@ -5,6 +7,8 @@ from sqlmodel import Session, select
 
 from backend.db import get_session
 from backend.models.Workspace import Workspace
+
+import traceback
 
 router = APIRouter()
 
@@ -73,30 +77,33 @@ async def delete_ws(id: str, session: Session = Depends(get_session)):
         return {"success": False, "message": str(e)}
 
 @router.get("/copyws/{id}")
-async def copy_ws(id: str, session: Session = Depends(get_session)):
-    """
-    Copy a workspace by ID.
-
-    Args:
-        id (str): The ID of the workspace to copy.
-
-    Returns:
-        dict: A dictionary containing the success state, a message and the copied workspace.
-    """
+def copy_ws(id: str):
     try:
-        ws = session.get(Workspace, id)
-        if ws is None:
-            return {"success": False, "message": "Workspace not found."}
-        new_ws = ws.model_copy()
-        new_ws.id = nanoid.generate()
-        new_ws.name = f"{ws.name} (Copy)"
+        with Session(engine) as session:
+            ws = session.get(Workspace, id)
+            if ws is None:
+                return {"success": False, "message": "Workspace not found."}
 
-        session.add(new_ws)
-        session.commit()
-        session.refresh(new_ws)
+            # 显式创建新对象（确保ORM状态为transient）
+            new_ws = Workspace(
+                id=nanoid.generate(),
+                name=f"{ws.name} (Copy)",
+                createdAt=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                lastModified=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                # 显式复制其他标量字段
+                description=ws.description,
+                modelType=ws.modelType,
+                status=ws.status
+                # 跳过关联字段（如documents等）
+            )
 
-        return {"success": True, "message": "Workspace copied successfully.", "workspace": new_ws}
+            session.add(new_ws)
+            session.commit()
+            session.refresh(new_ws)
+
+            return {"success": True, "workspace": new_ws}
     except Exception as e:
+        traceback.print_exc()
         return {"success": False, "message": str(e)}
 
 @router.put("/editws/{id}")
@@ -117,6 +124,7 @@ async def edit_ws(id: str, data: Workspace, session: Session = Depends(get_sessi
             return {"success": False, "message": "Workspace not found."}
         ws.name = data.name
         ws.description = data.description
+        ws.lastModified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ws.modelType = data.modelType
         session.commit()
         return {"success": True, "message": "Workspace edited successfully."}
