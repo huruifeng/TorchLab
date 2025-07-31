@@ -31,8 +31,7 @@ if __name__ == "__main__":
                 host=settings.uvicorn_host,
                 port=settings.uvicorn_port,
                 log_level=settings.uvicorn_log_level,
-                workers=settings.uvicorn_workers, # Number of worker processes. Only available when not using reload.
-                reload=True)
+                )
 
     # nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers >> backend.log 2>&1 &
     # nohup python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload --proxy-headers >> backend.log 2>&1 &

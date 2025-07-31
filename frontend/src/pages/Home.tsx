@@ -1,6 +1,6 @@
 "use client"
 
-import {useState} from "react"
+import {useEffect, useState} from "react"
 import {useNavigate} from "react-router-dom";
 import {nanoid} from "nanoid";
 import {Button} from "@/components/ui/button"
@@ -18,7 +18,7 @@ import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
 import {Badge} from "@/components/ui/badge"
 import {Textarea} from "@/components/ui/textarea"
-import {Select,SelectTrigger, SelectValue, SelectContent, SelectItem} from "@/components/ui/select"
+import {Select, SelectTrigger, SelectValue, SelectContent, SelectItem} from "@/components/ui/select"
 import {SidebarInset, SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar"
 import {
     Breadcrumb,
@@ -29,66 +29,63 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {Separator} from "@/components/ui/separator"
-import {
-    Plus,
-    Zap,
-    Code,
-    BarChart3,
-    Play,
-    Calendar,
-    Clock,
-    Trash2,
-    Copy,
-    Blocks,
-    Images,
-    Newspaper,
-} from "lucide-react"
+import {Plus, Zap, Code, BarChart3, Play, Calendar, Clock, Trash2, Copy, Blocks, Images, Newspaper,} from "lucide-react"
 import TorchLabIcon from "@/components/TorchLabIcon"
 import {AppSidebar} from "@/components/AppSidebar"
 
+import {useWorkspaceStore} from "@/store/workspaceStore.ts";
+
 
 interface Workspace {
-    id: string
     name: string
     description: string
-    createdAt: string
-    lastModified: string
     modelType: string
-    status: string
 }
+
 const modelTypes = ["DNN", "CNN", "RNN", "Transformer", "Custom"]
 
 export default function HomePage() {
-    const [workspaces, setWorkspaces] = useState<Workspace[]>([
-        {
-            id: "1",
-            name: "Image Classification Model",
-            description: "CNN for CIFAR-10 dataset classification",
-            createdAt: "2024-01-15",
-            lastModified: "2024-01-20",
-            modelType: "CNN",
-            status: "Completed",
-        },
-        {
-            id: "2",
-            name: "Text Sentiment Analysis",
-            description: "LSTM model for sentiment classification",
-            createdAt: "2024-01-18",
-            lastModified: "2024-01-19",
-            modelType: "RNN",
-            status: "Training",
-        },
-        {
-            id: "3",
-            name: "Language Translation",
-            description: "Transformer model for EN-ZH translation",
-            createdAt: "2024-01-20",
-            lastModified: "2024-01-20",
-            modelType: "Transformer",
-            status: "Draft",
-        },
-    ])
+    // const [workspaces, setWorkspaces] = useState<Workspace[]>([
+    //     {
+    //         id: "1",
+    //         name: "Image Classification Model",
+    //         description: "CNN for CIFAR-10 dataset classification",
+    //         createdAt: "2024-01-15",
+    //         lastModified: "2024-01-20",
+    //         modelType: "CNN",
+    //         status: "Completed",
+    //     },
+    //     {
+    //         id: "2",
+    //         name: "Text Sentiment Analysis",
+    //         description: "LSTM model for sentiment classification",
+    //         createdAt: "2024-01-18",
+    //         lastModified: "2024-01-19",
+    //         modelType: "RNN",
+    //         status: "Training",
+    //     },
+    //     {
+    //         id: "3",
+    //         name: "Language Translation",
+    //         description: "Transformer model for EN-ZH translation",
+    //         createdAt: "2024-01-20",
+    //         lastModified: "2024-01-20",
+    //         modelType: "Transformer",
+    //         status: "Draft",
+    //     },
+    // ])
+
     const navigate = useNavigate()
+
+    const {workspaces, setWorkspaces, getWorkspaces, createWorkspace, removeWorkspace} = useWorkspaceStore()
+
+    useEffect(() => {
+        const fetchWorkspaces = async () => {
+            const ws = await getWorkspaces()
+            setWorkspaces(ws)
+        }
+        fetchWorkspaces()
+    }, [workspaces.length])
 
     const [newWorkspace, setNewWorkspace] = useState({
         name: "",
@@ -100,18 +97,19 @@ export default function HomePage() {
     const handleCreateWorkspace = () => {
         if (newWorkspace.name.trim()) {
             const workspace: Workspace = {
-                id: nanoid(),
                 name: newWorkspace.name,
                 description: newWorkspace.description,
-                createdAt: new Date().toISOString().split("T")[0],
-                lastModified: new Date().toISOString().split("T")[0],
                 modelType: newWorkspace.modelType,
-                status: "Draft",
             }
-            setWorkspaces([workspace, ...workspaces])
+
+            createWorkspace(workspace.name, workspace.description, workspace.modelType)
             setNewWorkspace({name: "", description: "", modelType: "Custom"})
             setIsCreateDialogOpen(false)
         }
+    }
+
+    const handleRemoveWorkspace = (id: string) => {
+        removeWorkspace(id)
     }
 
     const getStatusVariant = (status: string) => {
@@ -256,7 +254,8 @@ export default function HomePage() {
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="description" className="text-right">Description</Label>
+                                                    <Label htmlFor="description"
+                                                           className="text-right">Description</Label>
                                                     <Textarea
                                                         id="description"
                                                         value={newWorkspace.description}
@@ -270,7 +269,8 @@ export default function HomePage() {
                                                     />
                                                 </div>
                                                 <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="description" className="text-right">Model Type</Label>
+                                                    <Label htmlFor="description" className="text-right">Model
+                                                        Type</Label>
                                                     <Select
                                                         value={newWorkspace.modelType}
                                                         onValueChange={(value) => setNewWorkspace({
@@ -292,7 +292,8 @@ export default function HomePage() {
                                                 </div>
                                             </div>
                                             <DialogFooter>
-                                                <Button onClick={handleCreateWorkspace} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                                                <Button onClick={handleCreateWorkspace}
+                                                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                                                     Create Workspace
                                                 </Button>
                                             </DialogFooter>
@@ -308,12 +309,15 @@ export default function HomePage() {
                                             <CardHeader className="pb-3">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
+                                                        <CardTitle
+                                                            className="text-lg group-hover:text-blue-600 transition-colors">
                                                             {ws.name}
                                                         </CardTitle>
-                                                        <CardDescription className="mt-1">{ws.description}</CardDescription>
+                                                        <CardDescription
+                                                            className="mt-1">{ws.description}</CardDescription>
                                                     </div>
-                                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div
+                                                        className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button variant="ghost" size="sm">
                                                             <Copy className="w-4 h-4"/>
                                                         </Button>
@@ -354,12 +358,15 @@ export default function HomePage() {
                                     ))}
 
                                     {/* Create New Workspace Card */}
-                                    <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer group"
+                                    <Card
+                                        className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer group"
                                         onClick={() => setIsCreateDialogOpen(true)}
                                     >
                                         <CardContent className="flex flex-col items-center justify-center h-full py-12">
-                                            <div className="w-16 h-16 bg-gray-100 group-hover:bg-blue-50 rounded-full flex items-center justify-center mb-4 transition-colors">
-                                                <Plus className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors"/>
+                                            <div
+                                                className="w-16 h-16 bg-gray-100 group-hover:bg-blue-50 rounded-full flex items-center justify-center mb-4 transition-colors">
+                                                <Plus
+                                                    className="w-8 h-8 text-gray-400 group-hover:text-blue-500 transition-colors"/>
                                             </div>
                                             <h3 className="text-lg font-semibold text-gray-700 group-hover:text-blue-600 transition-colors mb-2">
                                                 Create New Workspace
