@@ -6,7 +6,8 @@ import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Badge} from "@/components/ui/badge"
 import {Separator} from "@/components/ui/separator"
-import {Play, Save, Zap, Layers, Brain, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link} from "lucide-react"
+import {Play, Save, Zap, Layers, Brain, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link, Home} from "lucide-react"
+import TorchLabIcon from "@/components/TorchLabIcon.tsx";
 
 // 节点接口定义
 interface NetworkNode {
@@ -266,16 +267,23 @@ const ConnectionLine = ({
     const [isHovered, setIsHovered] = useState(false)
     const animationProgress = connection.animationProgress || 1
 
-    // const midX = (connection.fromX + connection.toX) / 2
-    // const controlY = connection.fromY + Math.abs(connection.toY - connection.fromY) * 0.5
-
     // 计算动画路径
     const animatedToX = connection.fromX + (connection.toX - connection.fromX) * animationProgress
     const animatedToY = connection.fromY + (connection.toY - connection.fromY) * animationProgress
-    const animatedMidX = (connection.fromX + animatedToX) / 2
-    const animatedControlY = connection.fromY + Math.abs(animatedToY - connection.fromY) * 0.5
 
-    const pathData = `M ${connection.fromX} ${connection.fromY} Q ${animatedMidX} ${animatedControlY} ${animatedToX} ${animatedToY}`
+    // 计算贝塞尔曲线的控制点
+    const controlX = (connection.fromX + animatedToX) / 2
+    const controlY = connection.fromY + Math.abs(animatedToY - connection.fromY) * 0.5
+
+    // 计算贝塞尔曲线上的真正中点 (t=0.5)
+    // 二次贝塞尔曲线公式: B(t) = (1-t)²*P0 + 2*(1-t)*t*P1 + t²*P2
+    // 当 t=0.5 时: B(0.5) = 0.25*P0 + 0.5*P1 + 0.25*P2
+    const t = 0.5
+    const oneMinusT = 1 - t
+    const realMidX = oneMinusT * oneMinusT * connection.fromX + 2 * oneMinusT * t * controlX + t * t * animatedToX
+    const realMidY = oneMinusT * oneMinusT * connection.fromY + 2 * oneMinusT * t * controlY + t * t * animatedToY
+
+     const pathData = `M ${connection.fromX} ${connection.fromY} Q ${controlX} ${controlY} ${animatedToX} ${animatedToY}`
 
       // 颜色方案
   const colors = {
@@ -352,8 +360,8 @@ const ConnectionLine = ({
             {/* 连接线中点的删除按钮 */}
             {animationProgress > 0.5 && (
                 <circle
-                    cx={animatedMidX}
-                    cy={animatedControlY}
+                    cx={realMidX}
+                    cy={realMidY}
                     r={isHovered ? "10" : "8"}
                     fill={connection.isDeleting ? colors.deleting : "white"}
                     stroke={connection.isDeleting ? colors.deleting : isHovered ? colors.hover : colors.normal}
@@ -369,8 +377,8 @@ const ConnectionLine = ({
             {/* 删除图标 */}
             {(isHovered || connection.isDeleting) && animationProgress > 0.5 && (
                 <text
-                    x={animatedMidX}
-                    y={animatedControlY + 3}
+                    x={realMidX}
+                    y={realMidY + 3}
                     textAnchor="middle"
                     fontSize="12"
                     fontWeight="bold"
@@ -520,8 +528,157 @@ const layerTypes = [
 
 export default function NetworkEditor() {
     const canvasRef = useRef<HTMLDivElement>(null)
-    const [nodes, setNodes] = useState<NetworkNode[]>([])
-    const [connections, setConnections] = useState<Connection[]>([])
+      // 预设一些节点来展示连接线效果
+  const [nodes, setNodes] = useState<NetworkNode[]>([
+    {
+      id: "input-demo",
+      type: "Input",
+      label: "Input Layer",
+      x: 100,
+      y: 100,
+      width: 150,
+      height: 100,
+      iconName: "Layers",
+      color: "text-blue-600",
+      params: { shape: "[batch, 784]" },
+      inputShape: "None",
+      outputShape: "[batch, 784]",
+    },
+    {
+      id: "linear1-demo",
+      type: "Linear",
+      label: "Linear",
+      x: 350,
+      y: 80,
+      width: 150,
+      height: 100,
+      iconName: "Brain",
+      color: "text-purple-600",
+      params: { in_features: 784, out_features: 256 },
+      inputShape: "[batch, 784]",
+      outputShape: "[batch, 256]",
+    },
+    {
+      id: "relu1-demo",
+      type: "ReLU",
+      label: "ReLU",
+      x: 600,
+      y: 100,
+      width: 150,
+      height: 100,
+      iconName: "Zap",
+      color: "text-red-600",
+      params: {},
+      inputShape: "[batch, 256]",
+      outputShape: "[batch, 256]",
+    },
+    {
+      id: "dropout-demo",
+      type: "Dropout",
+      label: "Dropout",
+      x: 350,
+      y: 250,
+      width: 150,
+      height: 100,
+      iconName: "Layers",
+      color: "text-orange-600",
+      params: { p: 0.3 },
+      inputShape: "[batch, 256]",
+      outputShape: "[batch, 256]",
+    },
+    {
+      id: "linear2-demo",
+      type: "Linear",
+      label: "Linear",
+      x: 600,
+      y: 280,
+      width: 150,
+      height: 100,
+      iconName: "Brain",
+      color: "text-purple-600",
+      params: { in_features: 256, out_features: 128 },
+      inputShape: "[batch, 256]",
+      outputShape: "[batch, 128]",
+    },
+    {
+      id: "softmax-demo",
+      type: "Softmax",
+      label: "Softmax",
+      x: 850,
+      y: 200,
+      width: 150,
+      height: 100,
+      iconName: "Zap",
+      color: "text-indigo-600",
+      params: { dim: 1 },
+      inputShape: "[batch, 128]",
+      outputShape: "[batch, 128]",
+    },
+  ])
+
+  // 预设一些连接来展示视觉效果
+  const [connections, setConnections] = useState<Connection[]>([
+    {
+      id: "conn-1",
+      from: "input-demo",
+      to: "linear1-demo",
+      fromX: 175, // input center x + width/2
+      fromY: 200, // input y + height
+      toX: 425, // linear1 center x + width/2
+      toY: 80, // linear1 y (top)
+      animationProgress: 1,
+    },
+    {
+      id: "conn-2",
+      from: "linear1-demo",
+      to: "relu1-demo",
+      fromX: 425,
+      fromY: 180,
+      toX: 675,
+      toY: 100,
+      animationProgress: 1,
+    },
+    {
+      id: "conn-3",
+      from: "linear1-demo",
+      to: "dropout-demo",
+      fromX: 425,
+      fromY: 180,
+      toX: 425,
+      toY: 250,
+      animationProgress: 1,
+    },
+    {
+      id: "conn-4",
+      from: "relu1-demo",
+      to: "linear2-demo",
+      fromX: 675,
+      fromY: 200,
+      toX: 675,
+      toY: 280,
+      animationProgress: 1,
+    },
+    {
+      id: "conn-5",
+      from: "dropout-demo",
+      to: "linear2-demo",
+      fromX: 425,
+      fromY: 350,
+      toX: 675,
+      toY: 280,
+      animationProgress: 1,
+    },
+    {
+      id: "conn-6",
+      from: "linear2-demo",
+      to: "softmax-demo",
+      fromX: 675,
+      fromY: 380,
+      toX: 925,
+      toY: 200,
+      animationProgress: 1,
+    },
+  ])
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [showGrid, setShowGrid] = useState(true)
 
@@ -842,6 +999,9 @@ export default function NetworkEditor() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                             <Button variant="outline" size="sm" onClick={() => setShowGrid(!showGrid)}>
+                                <Home className="w-4 h-4 mr-2"/>Back to Home
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setShowGrid(!showGrid)}>
                                 {showGrid ? <Eye className="w-4 h-4"/> : <EyeOff className="w-4 h-4"/>}Grid
                             </Button>
@@ -927,8 +1087,9 @@ export default function NetworkEditor() {
                         {nodes.length === 0 && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-gray-500">
-                                    <Brain className="w-16 h-16 mx-auto mb-4 text-gray-300"/>
-                                    <h3 className="text-lg font-medium mb-2">Start Building Your Network</h3>
+                                    {/*<Brain className="w-16 h-16 mx-auto mb-4 text-gray-300"/>*/}
+                                    <TorchLabIcon className="w-32 h-32 mx-auto mb-4 text-gray-300"/>
+                                    <h3 className="text-xl font-medium mb-2">Start Building Your Network</h3>
                                     <p className="text-sm">Drag layers from the left panel to begin</p>
                                     <p className="text-xs mt-2 text-gray-400">Click on green dots to create connections
                                         between layers</p>
