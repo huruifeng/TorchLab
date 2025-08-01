@@ -2,7 +2,7 @@ import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import {ThemeProvider, createTheme} from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import HomePage from "./pages/Home"
-import Editor from "@/pages/Editor.tsx";
+import EditorPage from "@/pages/Editor.tsx";
 
 const theme = createTheme({
     palette: {
@@ -65,7 +65,7 @@ function App() {
          <Router>
             <Routes>
                 <Route path="/" element={<HomePage/>}/>
-                <Route path="/workspace/:id" element={<Editor/>}/>
+                <Route path="/workspace/:id" element={<EditorPage />}/>
             </Routes>
         </Router>
     </ThemeProvider>
