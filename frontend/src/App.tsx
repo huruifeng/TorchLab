@@ -58,14 +58,12 @@ const theme = createTheme({
 
 function App() {
     return (
-
-
     <ThemeProvider theme={theme}>
         <CssBaseline/>
          <Router>
             <Routes>
                 <Route path="/" element={<HomePage/>}/>
-                <Route path="/workspace/:id" element={<EditorPage />}/>
+                <Route path="/workspace/:wsid" element={<EditorPage />}/>
             </Routes>
         </Router>
     </ThemeProvider>

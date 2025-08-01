@@ -1,684 +1,176 @@
 "use client"
 
-import React, {type ElementType} from "react"
-import {useCallback, useRef, useState, useEffect} from "react"
+import React from "react"
+import {useCallback, useRef, useState} from "react"
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Badge} from "@/components/ui/badge"
 import {Separator} from "@/components/ui/separator"
-import {Play, Save, Zap, Layers, Brain, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link, Home} from "lucide-react"
-import TorchLabIcon from "@/components/TorchLabIcon.tsx";
+import {Play, Save, Layers, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link, Home} from "lucide-react"
+import TorchLabIcon from "./TorchLabIcon.tsx"
+import type {NetworkNode, Connection, ConnectionPoint} from "@/types/network"
+import {layerTypes} from "@/constants/layers"
+import {iconMap} from "@/lib/icons"
+import {NetworkNode as LayerNode} from "@/components/network/NetworkNode"
+import {ConnectionLine} from "@/components/network/ConnectionLine"
+import {TempConnectionLine} from "@/components/network/TempConnectionLine"
+import {useNavigate} from "react-router-dom";
 
-// 节点接口定义
-interface NetworkNode {
-    id: string
-    type: string
-    label: string
-    x: number
-    y: number
-    width: number
-    height: number
-    iconName: string
-    color: string
-    params: Record<string, unknown>
-    inputShape: string
-    outputShape: string
-}
 
-// 连接接口定义
-interface Connection {
-    id: string
-    from: string
-    to: string
-    fromX: number
-    fromY: number
-    toX: number
-    toY: number
-    isAnimating?: boolean
-    isDeleting?: boolean
-    animationProgress?: number
-}
-
-// 连接点接口
-interface ConnectionPoint {
-    nodeId: string
-    type: "input" | "output"
-    x: number
-    y: number
-}
-
-// 图标映射
-const iconMap: Record<string, ElementType> = {Layers, Brain, Zap, Settings,}
-
-// 连接点组件
-const ConnectionDot = ({nodeId, type, x, y, onConnectionStart, onConnectionEnd, isConnecting, canConnect}: {
-    nodeId: string
-    type: "input" | "output"
-    x: number
-    y: number
-    onConnectionStart: (point: ConnectionPoint) => void
-    onConnectionEnd: (point: ConnectionPoint) => void
-    isConnecting: boolean
-    canConnect: boolean
-}) => {
-    const [isHovered, setIsHovered] = useState(false)
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (type === "output" && !isConnecting) {
-            onConnectionStart({nodeId, type, x, y})
-        }
-    }
-
-    const handleMouseUp = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        if (type === "input" && isConnecting && canConnect) {
-            onConnectionEnd({nodeId, type, x, y})
-        }
-    }
-
-    const handleMouseEnter = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        setIsHovered(true)
-    }
-
-    const handleMouseLeave = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        setIsHovered(false)
-    }
-
-    return (
-        <div className={`absolute w-3 h-3 rounded-full border-2 border-white cursor-pointer transition-all duration-200 ${
-                type === "input"
-                    ? `bg-blue-500 -top-2 left-1/2 transform -translate-x-1/2 ${
-                        isConnecting && canConnect ? "scale-150 shadow-lg ring-2 ring-blue-300 ring-opacity-50" : ""
-                    } ${isHovered ? "scale-125" : ""}`
-                    : `bg-green-500 -bottom-2 left-1/2 transform -translate-x-1/2 ${
-                        !isConnecting && isHovered ? "scale-125 shadow-md" : ""
-                    }`
-            } ${isConnecting && type === "input" && canConnect ? "bg-blue-400 animate-pulse" : ""}`}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            title={type === "input" ? "Input connection point" : "Output connection point"}
-        />
-    )
-}
-
-// 自定义节点组件
-const LayerNode = ({
-                       node,
-                       selected,
-                       onSelect,
-                       onDelete,
-                       onDrag,
-                       onConnectionStart,
-                       onConnectionEnd,
-                       isConnecting,
-                       connectingFrom,
-                   }: {
-    node: NetworkNode
-    selected: boolean
-    onSelect: (id: string) => void
-    onDelete: (id: string) => void
-    onDrag: (id: string, x: number, y: number) => void
-    onConnectionStart: (point: ConnectionPoint) => void
-    onConnectionEnd: (point: ConnectionPoint) => void
-    isConnecting: boolean
-    connectingFrom: string | null
-}) => {
-    const [isDragging, setIsDragging] = useState(false)
-    const [dragStart, setDragStart] = useState({x: 0, y: 0})
-
-    const IconComponent = iconMap[node.iconName] || Layers
-
-    // 计算连接点的绝对位置
-    const inputPoint = {
-        x: node.x + node.width / 2,
-        y: node.y,
-    }
-    const outputPoint = {
-        x: node.x + node.width / 2,
-        y: node.y + node.height,
-    }
-
-    // 检查是否可以连接到这个节点
-    const canConnectToInput = isConnecting && connectingFrom !== node.id
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        e.preventDefault()
-        if (!isConnecting) {
-            setIsDragging(true)
-            setDragStart({
-                x: e.clientX - node.x,
-                y: e.clientY - node.y,
-            })
-            onSelect(node.id)
-        }
-    }
-
-    const handleMouseMove = useCallback(
-        (e: MouseEvent) => {
-            if (isDragging && !isConnecting) {
-                const newX = e.clientX - dragStart.x
-                const newY = e.clientY - dragStart.y
-                onDrag(node.id, newX, newY)
-            }
-        },
-        [isDragging, dragStart, node.id, onDrag, isConnecting],
-    )
-
-    const handleMouseUp = useCallback(() => {
-        setIsDragging(false)
-    }, [])
-
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener("mousemove", handleMouseMove)
-            document.addEventListener("mouseup", handleMouseUp)
-            return () => {
-                document.removeEventListener("mousemove", handleMouseMove)
-                document.removeEventListener("mouseup", handleMouseUp)
-            }
-        }
-    }, [isDragging, handleMouseMove, handleMouseUp])
-
-    return (
-        <div className={`absolute px-4 py-3 shadow-md rounded-lg bg-white border-2 min-w-[150px] select-none group transition-all duration-200 ${selected ? "border-blue-500 shadow-lg" : "border-gray-200"
-            } ${isDragging ? "z-50 scale-105" : "z-10"} ${!isConnecting ? "cursor-move" : "cursor-default"} ${
-                isConnecting && canConnectToInput ? "ring-2 ring-blue-300 ring-opacity-50 shadow-lg" : ""
-            }`}
-            style={{
-                left: node.x,
-                top: node.y,
-                width: node.width,
-                height: node.height,
-            }}
-            onMouseDown={handleMouseDown}
-        >
-            <div className="flex items-center gap-2 mb-2">
-                <IconComponent className={`w-4 h-4 ${node.color}`}/>
-                <div className="font-semibold text-sm">{node.label}</div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-auto p-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(node.id)
-                    }}
-                >
-                    <Trash2 className="w-3 h-3"/>
-                </Button>
-            </div>
-
-            {Object.keys(node.params).length > 0 && (
-                <div className="text-xs text-gray-600 space-y-1 mb-2">
-                    {Object.entries(node.params)
-                        .slice(0, 2)
-                        .map(([key, value]) => (
-                            <div key={key} className="flex justify-between">
-                                <span>{key}:</span>
-                                <span className="font-mono">{String(value)}</span>
-                            </div>
-                        ))}
-                </div>
-            )}
-
-            <div className="flex justify-between items-center text-xs text-gray-500">
-                <span className="truncate">In: {node.inputShape}</span>
-                <span className="truncate">Out: {node.outputShape}</span>
-            </div>
-
-            {/* 连接点 */}
-            <ConnectionDot
-                nodeId={node.id}
-                type="input"
-                x={inputPoint.x}
-                y={inputPoint.y}
-                onConnectionStart={onConnectionStart}
-                onConnectionEnd={onConnectionEnd}
-                isConnecting={isConnecting}
-                canConnect={canConnectToInput}
-            />
-            <ConnectionDot
-                nodeId={node.id}
-                type="output"
-                x={outputPoint.x}
-                y={outputPoint.y}
-                onConnectionStart={onConnectionStart}
-                onConnectionEnd={onConnectionEnd}
-                isConnecting={isConnecting}
-                canConnect={false}
-            />
-        </div>
-    )
-}
-
-// 连接线组件
-const ConnectionLine = ({
-                            connection,
-                            onDelete,
-                        }: {
-    connection: Connection
-    onDelete: (id: string) => void
-}) => {
-    const [isHovered, setIsHovered] = useState(false)
-    const animationProgress = connection.animationProgress || 1
-
-    // 计算动画路径
-    const animatedToX = connection.fromX + (connection.toX - connection.fromX) * animationProgress
-    const animatedToY = connection.fromY + (connection.toY - connection.fromY) * animationProgress
-
-    // 计算贝塞尔曲线的控制点
-    const controlX = (connection.fromX + animatedToX) / 2
-    const controlY = connection.fromY + Math.abs(animatedToY - connection.fromY) * 0.5
-
-    // 计算贝塞尔曲线上的真正中点 (t=0.5)
-    // 二次贝塞尔曲线公式: B(t) = (1-t)²*P0 + 2*(1-t)*t*P1 + t²*P2
-    // 当 t=0.5 时: B(0.5) = 0.25*P0 + 0.5*P1 + 0.25*P2
-    const t = 0.5
-    const oneMinusT = 1 - t
-    const realMidX = oneMinusT * oneMinusT * connection.fromX + 2 * oneMinusT * t * controlX + t * t * animatedToX
-    const realMidY = oneMinusT * oneMinusT * connection.fromY + 2 * oneMinusT * t * controlY + t * t * animatedToY
-
-     const pathData = `M ${connection.fromX} ${connection.fromY} Q ${controlX} ${controlY} ${animatedToX} ${animatedToY}`
-
-      // 颜色方案
-  const colors = {
-    normal: "#6b7280", //or, indigo-500
-    hover: "#ef4444", //or, indigo-600
-    deleting: "#dfd1d1", //or, red-500
-    shadow: "#c7d2fe", //or, indigo-200
-  }
-
-    const handleMouseEnter = () => setIsHovered(true)
-    const handleMouseLeave = () => setIsHovered(false)
-
-    const handleClick = () => {
-        if (!connection.isDeleting) {
-            onDelete(connection.id)
-        }
-    }
-
-    return (
-        <g>
-            <defs>
-                <marker id={`arrowhead-${connection.id}`} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                    <polygon
-                        points="0 0, 10 3.5, 0 7"
-                        fill={connection.isDeleting ? colors.deleting : isHovered ? colors.hover : colors.normal}
-                        className="transition-colors duration-200"
-                    />
-                </marker>
-
-                {/* 流动动画的渐变 */}
-                <linearGradient id={`flow-gradient-${connection.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="transparent"/>
-                    <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.6"/>
-                    <stop offset="100%" stopColor="transparent"/>
-                    <animateTransform
-                        attributeName="gradientTransform"
-                        type="translate"
-                        values="-100 0;100 0;-100 0"
-                        dur="2s"
-                        repeatCount="indefinite"
-                    />
-                </linearGradient>
-            </defs>
-
-            {/* 主连接线 */}
-            <path
-                d={pathData}
-                stroke={connection.isDeleting ? colors.deleting : isHovered ? colors.hover : colors.normal}
-                strokeWidth={isHovered ? "3" : "2"}
-                fill="none"
-                markerEnd={animationProgress > 0.8 ? `url(#arrowhead-${connection.id})` : "none"}
-                className={`cursor-pointer transition-all duration-200 ${connection.isDeleting ? "opacity-50" : "opacity-100"}`}
-                style={{
-                    pointerEvents: "stroke",
-                    strokeDasharray: connection.isAnimating ? "5,5" : "none",
-                    strokeDashoffset: connection.isAnimating ? "10" : "0",
-                }}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                onClick={handleClick}
-            />
-
-            {/* 流动效果线（仅在非删除状态下显示） */}
-            {!connection.isDeleting && animationProgress === 1 && (
-                <path
-                    d={pathData}
-                    stroke={`url(#flow-gradient-${connection.id})`}
-                    strokeWidth="2"
-                    fill="none"
-                    className="pointer-events-none"
-                />
-            )}
-
-            {/* 连接线中点的删除按钮 */}
-            {animationProgress > 0.5 && (
-                <circle
-                    cx={realMidX}
-                    cy={realMidY}
-                    r={isHovered ? "10" : "8"}
-                    fill={connection.isDeleting ? colors.deleting : "white"}
-                    stroke={connection.isDeleting ? colors.deleting : isHovered ? colors.hover : colors.normal}
-                    strokeWidth="2"
-                    className={`cursor-pointer transition-all duration-200 ${isHovered || connection.isDeleting ? "opacity-100" : "opacity-0"}`}
-                    style={{pointerEvents: "all"}}
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={handleClick}
-                />
-            )}
-
-            {/* 删除图标 */}
-            {(isHovered || connection.isDeleting) && animationProgress > 0.5 && (
-                <text
-                    x={realMidX}
-                    y={realMidY + 3}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fontWeight="bold"
-                    fill={connection.isDeleting ? colors.deleting : isHovered ? colors.hover : colors.normal}
-                    className="pointer-events-none select-none transition-colors duration-200"
-                >
-                    ×
-                </text>
-            )}
-        </g>
-    )
-}
-
-// 临时连接线组件（拖拽时显示）
-const TempConnectionLine = ({from, to,}: {
-    from: { x: number; y: number }
-    to: { x: number; y: number }
-}) => {
-    const midX = (from.x + to.x) / 2
-    const controlY = from.y + Math.abs(to.y - from.y) * 0.5
-
-    return (
-        <g>
-            <defs>
-                <linearGradient id="temp-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3"/>
-                    <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.8"/>
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.3"/>
-                    <animateTransform
-                        attributeName="gradientTransform"
-                        type="translate"
-                        values="-50 0;50 0;-50 0"
-                        dur="1s"
-                        repeatCount="indefinite"
-                    />
-                </linearGradient>
-            </defs>
-
-            <path
-                d={`M ${from.x} ${from.y} Q ${midX} ${controlY} ${to.x} ${to.y}`}
-                stroke="url(#temp-gradient)"
-                strokeWidth="3"
-                strokeDasharray="8,4"
-                fill="none"
-                style={{pointerEvents: "none"}}
-                className="animate-pulse"
-            />
-        </g>
-    )
-}
-
-// 预定义的层类型
-const layerTypes = [
-    {
-        category: "Input Layers",
-        layers: [
-            {
-                type: "Input",
-                label: "Input Layer",
-                iconName: "Layers",
-                color: "text-blue-600",
-                params: {shape: "[batch, 784]"},
-                inputShape: "None",
-                outputShape: "[batch, 784]",
-            },
-        ],
-    },
-    {
-        category: "Dense Layers",
-        layers: [
-            {
-                type: "Linear",
-                label: "Linear",
-                iconName: "Brain",
-                color: "text-purple-600",
-                params: {in_features: 784, out_features: 128},
-                inputShape: "[batch, 784]",
-                outputShape: "[batch, 128]",
-            },
-            {
-                type: "Dropout",
-                label: "Dropout",
-                iconName: "Layers",
-                color: "text-orange-600",
-                params: {p: 0.5},
-                inputShape: "[batch, N]",
-                outputShape: "[batch, N]",
-            },
-        ],
-    },
-    {
-        category: "Convolutional Layers",
-        layers: [
-            {
-                type: "Conv2d",
-                label: "Conv2D",
-                iconName: "Layers",
-                color: "text-green-600",
-                params: {in_channels: 3, out_channels: 64, kernel_size: 3},
-                inputShape: "[batch, 3, H, W]",
-                outputShape: "[batch, 64, H, W]",
-            },
-            {
-                type: "MaxPool2d",
-                label: "MaxPool2D",
-                iconName: "Layers",
-                color: "text-cyan-600",
-                params: {kernel_size: 2, stride: 2},
-                inputShape: "[batch, C, H, W]",
-                outputShape: "[batch, C, H/2, W/2]",
-            },
-        ],
-    },
-    {
-        category: "Activation Functions",
-        layers: [
-            {
-                type: "ReLU",
-                label: "ReLU",
-                iconName: "Zap",
-                color: "text-red-600",
-                params: {},
-                inputShape: "[batch, N]",
-                outputShape: "[batch, N]",
-            },
-            {
-                type: "Sigmoid",
-                label: "Sigmoid",
-                iconName: "Zap",
-                color: "text-pink-600",
-                params: {},
-                inputShape: "[batch, N]",
-                outputShape: "[batch, N]",
-            },
-            {
-                type: "Softmax",
-                label: "Softmax",
-                iconName: "Zap",
-                color: "text-indigo-600",
-                params: {dim: 1},
-                inputShape: "[batch, N]",
-                outputShape: "[batch, N]",
-            },
-        ],
-    },
-]
-
-export default function NetworkEditor() {
+export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
     const canvasRef = useRef<HTMLDivElement>(null)
-      // 预设一些节点来展示连接线效果
-  const [nodes, setNodes] = useState<NetworkNode[]>([
-    {
-      id: "input-demo",
-      type: "Input",
-      label: "Input Layer",
-      x: 100,
-      y: 100,
-      width: 150,
-      height: 100,
-      iconName: "Layers",
-      color: "text-blue-600",
-      params: { shape: "[batch, 784]" },
-      inputShape: "None",
-      outputShape: "[batch, 784]",
-    },
-    {
-      id: "linear1-demo",
-      type: "Linear",
-      label: "Linear",
-      x: 350,
-      y: 80,
-      width: 150,
-      height: 100,
-      iconName: "Brain",
-      color: "text-purple-600",
-      params: { in_features: 784, out_features: 256 },
-      inputShape: "[batch, 784]",
-      outputShape: "[batch, 256]",
-    },
-    {
-      id: "relu1-demo",
-      type: "ReLU",
-      label: "ReLU",
-      x: 600,
-      y: 100,
-      width: 150,
-      height: 100,
-      iconName: "Zap",
-      color: "text-red-600",
-      params: {},
-      inputShape: "[batch, 256]",
-      outputShape: "[batch, 256]",
-    },
-    {
-      id: "dropout-demo",
-      type: "Dropout",
-      label: "Dropout",
-      x: 350,
-      y: 250,
-      width: 150,
-      height: 100,
-      iconName: "Layers",
-      color: "text-orange-600",
-      params: { p: 0.3 },
-      inputShape: "[batch, 256]",
-      outputShape: "[batch, 256]",
-    },
-    {
-      id: "linear2-demo",
-      type: "Linear",
-      label: "Linear",
-      x: 600,
-      y: 280,
-      width: 150,
-      height: 100,
-      iconName: "Brain",
-      color: "text-purple-600",
-      params: { in_features: 256, out_features: 128 },
-      inputShape: "[batch, 256]",
-      outputShape: "[batch, 128]",
-    },
-    {
-      id: "softmax-demo",
-      type: "Softmax",
-      label: "Softmax",
-      x: 850,
-      y: 200,
-      width: 150,
-      height: 100,
-      iconName: "Zap",
-      color: "text-indigo-600",
-      params: { dim: 1 },
-      inputShape: "[batch, 128]",
-      outputShape: "[batch, 128]",
-    },
-  ])
+    const navigate = useNavigate()
+    // 预设一些节点来展示连接线效果
+    const [nodes, setNodes] = useState<NetworkNode[]>([
+        {
+            id: "input-demo",
+            type: "Input",
+            label: "Input Layer",
+            x: 100,
+            y: 100,
+            width: 150,
+            height: 100,
+            iconName: "Layers",
+            color: "text-blue-600",
+            params: {shape: "[batch, 784]"},
+            inputShape: "None",
+            outputShape: "[batch, 784]",
+        },
+        {
+            id: "linear1-demo",
+            type: "Linear",
+            label: "Linear",
+            x: 350,
+            y: 80,
+            width: 150,
+            height: 100,
+            iconName: "Brain",
+            color: "text-purple-600",
+            params: {in_features: 784, out_features: 256},
+            inputShape: "[batch, 784]",
+            outputShape: "[batch, 256]",
+        },
+        {
+            id: "relu1-demo",
+            type: "ReLU",
+            label: "ReLU",
+            x: 600,
+            y: 100,
+            width: 150,
+            height: 100,
+            iconName: "Zap",
+            color: "text-red-600",
+            params: {},
+            inputShape: "[batch, 256]",
+            outputShape: "[batch, 256]",
+        },
+        {
+            id: "dropout-demo",
+            type: "Dropout",
+            label: "Dropout",
+            x: 350,
+            y: 250,
+            width: 150,
+            height: 100,
+            iconName: "Layers",
+            color: "text-orange-600",
+            params: {p: 0.3},
+            inputShape: "[batch, 256]",
+            outputShape: "[batch, 256]",
+        },
+        {
+            id: "linear2-demo",
+            type: "Linear",
+            label: "Linear",
+            x: 600,
+            y: 280,
+            width: 150,
+            height: 100,
+            iconName: "Brain",
+            color: "text-purple-600",
+            params: {in_features: 256, out_features: 128},
+            inputShape: "[batch, 256]",
+            outputShape: "[batch, 128]",
+        },
+        {
+            id: "softmax-demo",
+            type: "Softmax",
+            label: "Softmax",
+            x: 850,
+            y: 200,
+            width: 150,
+            height: 100,
+            iconName: "Zap",
+            color: "text-indigo-600",
+            params: {dim: 1},
+            inputShape: "[batch, 128]",
+            outputShape: "[batch, 128]",
+        },
+    ])
 
-  // 预设一些连接来展示视觉效果
-  const [connections, setConnections] = useState<Connection[]>([
-    {
-      id: "conn-1",
-      from: "input-demo",
-      to: "linear1-demo",
-      fromX: 175, // input center x + width/2
-      fromY: 200, // input y + height
-      toX: 425, // linear1 center x + width/2
-      toY: 80, // linear1 y (top)
-      animationProgress: 1,
-    },
-    {
-      id: "conn-2",
-      from: "linear1-demo",
-      to: "relu1-demo",
-      fromX: 425,
-      fromY: 180,
-      toX: 675,
-      toY: 100,
-      animationProgress: 1,
-    },
-    {
-      id: "conn-3",
-      from: "linear1-demo",
-      to: "dropout-demo",
-      fromX: 425,
-      fromY: 180,
-      toX: 425,
-      toY: 250,
-      animationProgress: 1,
-    },
-    {
-      id: "conn-4",
-      from: "relu1-demo",
-      to: "linear2-demo",
-      fromX: 675,
-      fromY: 200,
-      toX: 675,
-      toY: 280,
-      animationProgress: 1,
-    },
-    {
-      id: "conn-5",
-      from: "dropout-demo",
-      to: "linear2-demo",
-      fromX: 425,
-      fromY: 350,
-      toX: 675,
-      toY: 280,
-      animationProgress: 1,
-    },
-    {
-      id: "conn-6",
-      from: "linear2-demo",
-      to: "softmax-demo",
-      fromX: 675,
-      fromY: 380,
-      toX: 925,
-      toY: 200,
-      animationProgress: 1,
-    },
-  ])
+    // 预设一些连接来展示视觉效果
+    const [connections, setConnections] = useState<Connection[]>([
+        {
+            id: "conn-1",
+            from: "input-demo",
+            to: "linear1-demo",
+            fromX: 175, // input center x + width/2
+            fromY: 200, // input y + height
+            toX: 425, // linear1 center x + width/2
+            toY: 80, // linear1 y (top)
+            animationProgress: 1,
+        },
+        {
+            id: "conn-2",
+            from: "linear1-demo",
+            to: "relu1-demo",
+            fromX: 425,
+            fromY: 180,
+            toX: 675,
+            toY: 100,
+            animationProgress: 1,
+        },
+        {
+            id: "conn-3",
+            from: "linear1-demo",
+            to: "dropout-demo",
+            fromX: 425,
+            fromY: 180,
+            toX: 425,
+            toY: 250,
+            animationProgress: 1,
+        },
+        {
+            id: "conn-4",
+            from: "relu1-demo",
+            to: "linear2-demo",
+            fromX: 675,
+            fromY: 200,
+            toX: 675,
+            toY: 280,
+            animationProgress: 1,
+        },
+        {
+            id: "conn-5",
+            from: "dropout-demo",
+            to: "linear2-demo",
+            fromX: 425,
+            fromY: 350,
+            toX: 675,
+            toY: 280,
+            animationProgress: 1,
+        },
+        {
+            id: "conn-6",
+            from: "linear2-demo",
+            to: "softmax-demo",
+            fromX: 675,
+            fromY: 380,
+            toX: 925,
+            toY: 200,
+            animationProgress: 1,
+        },
+    ])
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [showGrid, setShowGrid] = useState(true)
 
@@ -953,7 +445,7 @@ export default function NetworkEditor() {
                                     return (
                                         <Card
                                             key={layer.type}
-                                            className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 hover:scale-105"
+                                            className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 hover:scale-105 py-0"
                                             draggable
                                             onDragStart={(event) => onDragStart(event, layer)}
                                         >
@@ -989,7 +481,7 @@ export default function NetworkEditor() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl font-semibold">Network Editor</h1>
-                            <Badge variant="outline">Untitled Model</Badge>
+                            <Badge variant="outline">{wsid}</Badge>
                             {isConnecting && (
                                 <Badge variant="secondary" className="bg-blue-100 text-blue-800 animate-pulse">
                                     <Link className="w-3 h-3 mr-1"/>
@@ -999,17 +491,20 @@ export default function NetworkEditor() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                             <Button variant="outline" size="sm" onClick={() => setShowGrid(!showGrid)}>
-                                <Home className="w-4 h-4 mr-2"/>Back to Home
+                            <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+                                <Home className="w-4 h-4 mr-2"/>
+                                Back to Home
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setShowGrid(!showGrid)}>
                                 {showGrid ? <Eye className="w-4 h-4"/> : <EyeOff className="w-4 h-4"/>}Grid
                             </Button>
                             <Button variant="outline" size="sm" onClick={clearCanvas}>
-                                <RotateCcw className="w-4 h-4 mr-2"/>Clear
+                                <RotateCcw className="w-4 h-4 mr-2"/>
+                                Clear
                             </Button>
                             <Button variant="outline" size="sm" onClick={generateCode}>
-                                <Code className="w-4 h-4 mr-2"/>Generate Code
+                                <Code className="w-4 h-4 mr-2"/>
+                                Generate Code
                             </Button>
                             <Separator orientation="vertical" className="h-6"/>
                             <Button variant="outline" size="sm">
@@ -1017,7 +512,8 @@ export default function NetworkEditor() {
                                 Save
                             </Button>
                             <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600">
-                                <Play className="w-4 h-4 mr-2"/>Train Model
+                                <Play className="w-4 h-4 mr-2"/>
+                                Train Model
                             </Button>
                         </div>
                     </div>
@@ -1040,7 +536,8 @@ export default function NetworkEditor() {
                         }}
                     >
                         {/* SVG 容器用于连接线 */}
-                        <svg className="absolute inset-0" width="100%" height="100%" style={{zIndex: 1, pointerEvents: "none"}}>
+                        <svg className="absolute inset-0" width="100%" height="100%"
+                             style={{zIndex: 1, pointerEvents: "none"}}>
                             {/* 现有连接线 */}
                             {connections.map((connection) => (<ConnectionLine key={connection.id} connection={connection} onDelete={handleConnectionDelete}/>))}
                             {/* 临时连接线 */}
@@ -1087,7 +584,7 @@ export default function NetworkEditor() {
                         {nodes.length === 0 && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-gray-500">
-                                    {/*<Brain className="w-16 h-16 mx-auto mb-4 text-gray-300"/>*/}
+                                    {/*<Brain className="w-16 h-16 mx-auto mb-4 text-gray-300/>*/}
                                     <TorchLabIcon className="w-32 h-32 mx-auto mb-4 text-gray-300"/>
                                     <h3 className="text-xl font-medium mb-2">Start Building Your Network</h3>
                                     <p className="text-sm">Drag layers from the left panel to begin</p>
