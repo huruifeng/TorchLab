@@ -3,6 +3,7 @@ import {create} from 'zustand'
 import {nanoid} from 'nanoid'
 import axios from 'axios'
 import {getFormattedDateTime} from "@/lib/utils.ts";
+import {toast} from "react-toastify";
 
 const BASE_URL = 'http://localhost:8000'
 const WS_URL = `${BASE_URL}/workspaces`
@@ -19,6 +20,8 @@ interface Workspace {
 
 interface WorkspaceStore {
     workspaces: Workspace[]
+    getWorkspaceById: (wsId: string) => Promise<any>
+    saveWsNet: (wsId: string, net: any) => Promise<void>
     setWorkspaces: (workspaces: Workspace[]) => void
     getWorkspaces: () => Promise<Workspace[]>
     createWorkspace: (name: string, description: string, modelType: string) => Promise<string>
@@ -30,6 +33,36 @@ interface WorkspaceStore {
 export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
     workspaces: [],
     setWorkspaces: (workspaces) => set({workspaces}),
+    getWorkspaceById: async (wsId) => {
+        try {
+            const { data } = await axios.get(`${WS_URL}/getwsbyid/${wsId}`)
+            if (data.success) {
+                return data
+            } else {
+                toast.error(data.message)
+                return null
+            }
+        } catch (error) {
+            toast.error('Failed to fetch workspace.')
+            console.error('Failed to fetch workspace', error)
+            return null
+        }
+    },
+    saveWsNet: async (wsId, net) => {
+        try {
+            console.log(net)
+            const { data } = await axios.post(`${WS_URL}/save_wsnet/${wsId}`, net)
+            console.log(data)
+            if (data.success) {
+                toast.success('Workspace net saved successfully.')
+            }else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error('Failed to save workspace net.')
+            console.error('Failed to save workspace net', error)
+        }
+    },
     getWorkspaces: async () => {
         try {
             const { data } = await axios.get(`${WS_URL}/getws`)

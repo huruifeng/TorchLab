@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, {useEffect} from "react"
 import {useCallback, useRef, useState} from "react"
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
@@ -15,164 +15,36 @@ import {NetworkNode as LayerNode} from "@/components/network/NetworkNode"
 import {ConnectionLine} from "@/components/network/ConnectionLine"
 import {TempConnectionLine} from "@/components/network/TempConnectionLine"
 import {useNavigate} from "react-router-dom";
+import {useWorkspaceStore} from "@/store/workspaceStore.ts";
 
 
 export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
+
     const canvasRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
     // 预设一些节点来展示连接线效果
-    const [nodes, setNodes] = useState<NetworkNode[]>([
-        {
-            id: "input-demo",
-            type: "Input",
-            label: "Input Layer",
-            x: 100,
-            y: 100,
-            width: 150,
-            height: 100,
-            iconName: "Layers",
-            color: "text-blue-600",
-            params: {shape: "[batch, 784]"},
-            inputShape: "None",
-            outputShape: "[batch, 784]",
-        },
-        {
-            id: "linear1-demo",
-            type: "Linear",
-            label: "Linear",
-            x: 350,
-            y: 80,
-            width: 150,
-            height: 100,
-            iconName: "Brain",
-            color: "text-purple-600",
-            params: {in_features: 784, out_features: 256},
-            inputShape: "[batch, 784]",
-            outputShape: "[batch, 256]",
-        },
-        {
-            id: "relu1-demo",
-            type: "ReLU",
-            label: "ReLU",
-            x: 600,
-            y: 100,
-            width: 150,
-            height: 100,
-            iconName: "Zap",
-            color: "text-red-600",
-            params: {},
-            inputShape: "[batch, 256]",
-            outputShape: "[batch, 256]",
-        },
-        {
-            id: "dropout-demo",
-            type: "Dropout",
-            label: "Dropout",
-            x: 350,
-            y: 250,
-            width: 150,
-            height: 100,
-            iconName: "Layers",
-            color: "text-orange-600",
-            params: {p: 0.3},
-            inputShape: "[batch, 256]",
-            outputShape: "[batch, 256]",
-        },
-        {
-            id: "linear2-demo",
-            type: "Linear",
-            label: "Linear",
-            x: 600,
-            y: 280,
-            width: 150,
-            height: 100,
-            iconName: "Brain",
-            color: "text-purple-600",
-            params: {in_features: 256, out_features: 128},
-            inputShape: "[batch, 256]",
-            outputShape: "[batch, 128]",
-        },
-        {
-            id: "softmax-demo",
-            type: "Softmax",
-            label: "Softmax",
-            x: 850,
-            y: 200,
-            width: 150,
-            height: 100,
-            iconName: "Zap",
-            color: "text-indigo-600",
-            params: {dim: 1},
-            inputShape: "[batch, 128]",
-            outputShape: "[batch, 128]",
-        },
-    ])
+    const [nodes, setNodes] = useState<NetworkNode[]>([])
 
     // 预设一些连接来展示视觉效果
-    const [connections, setConnections] = useState<Connection[]>([
-        {
-            id: "conn-1",
-            from: "input-demo",
-            to: "linear1-demo",
-            fromX: 175, // input center x + width/2
-            fromY: 200, // input y + height
-            toX: 425, // linear1 center x + width/2
-            toY: 80, // linear1 y (top)
-            animationProgress: 1,
-        },
-        {
-            id: "conn-2",
-            from: "linear1-demo",
-            to: "relu1-demo",
-            fromX: 425,
-            fromY: 180,
-            toX: 675,
-            toY: 100,
-            animationProgress: 1,
-        },
-        {
-            id: "conn-3",
-            from: "linear1-demo",
-            to: "dropout-demo",
-            fromX: 425,
-            fromY: 180,
-            toX: 425,
-            toY: 250,
-            animationProgress: 1,
-        },
-        {
-            id: "conn-4",
-            from: "relu1-demo",
-            to: "linear2-demo",
-            fromX: 675,
-            fromY: 200,
-            toX: 675,
-            toY: 280,
-            animationProgress: 1,
-        },
-        {
-            id: "conn-5",
-            from: "dropout-demo",
-            to: "linear2-demo",
-            fromX: 425,
-            fromY: 350,
-            toX: 675,
-            toY: 280,
-            animationProgress: 1,
-        },
-        {
-            id: "conn-6",
-            from: "linear2-demo",
-            to: "softmax-demo",
-            fromX: 675,
-            fromY: 380,
-            toX: 925,
-            toY: 200,
-            animationProgress: 1,
-        },
-    ])
+    const [workspace, setWorkspace] = useState(null)
+    const [connections, setConnections] = useState<Connection[]>([])
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [showGrid, setShowGrid] = useState(true)
+
+    const {saveWsNet, getWorkspaceById} = useWorkspaceStore()
+
+    useEffect(() => {
+         const fetchWsById = async () => {
+            const ws_data = await getWorkspaceById(wsid)
+            if (ws_data.success) {
+                setWorkspace(ws_data.workspace)
+                const net = ws_data.wsnet
+                setNodes(net.nodes)
+                setConnections(net.connections)
+            }
+        }
+        fetchWsById()
+    }, [wsid])
 
     // 连接状态
     const [isConnecting, setIsConnecting] = useState(false)
@@ -278,8 +150,9 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
             outputShape: layerData.outputShape,
         }
 
-        setNodes((prev) => [...prev, newNode])
+        setNodes((prev) => [...(prev||[]), newNode])
     }, [])
+
 
     const handleNodeDrag = useCallback((id: string, x: number, y: number) => {
         setNodes((prev) => prev.map((node) => (node.id === id ? {...node, x, y} : node)))
@@ -318,7 +191,7 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
     const handleNodeDelete = useCallback(
         (id: string) => {
             // 先删除相关连接（带动画）
-            const relatedConnections = connections.filter((conn) => conn.from === id || conn.to === id)
+            const relatedConnections = connections?.filter((conn) => conn.from === id || conn.to === id)
             relatedConnections.forEach((conn) => {
                 animateConnectionDeletion(conn.id)
             })
@@ -426,6 +299,40 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
         // Here you would implement the actual code generation logic
     }
 
+
+    const handelSaveNet = async () => {
+        const net = {
+            nodes: nodes.map((node) => ({
+                id: node.id,
+                type: node.type,
+                label: node.label,
+                x: node.x,
+                y: node.y,
+                width: node.width,
+                height: node.height,
+                iconName: node.iconName,
+                color: node.color,
+                params: node.params,
+                inputShape: node.inputShape,
+                outputShape: node.outputShape,
+            })),
+            connections: connections.map((conn) => ({
+                id: conn.id,
+                from: conn.from,
+                to: conn.to,
+                fromX: conn.fromX,
+                fromY: conn.fromY,
+                toX: conn.toX,
+                toY: conn.toY,
+                isAnimating: conn.isAnimating,
+                animationProgress: conn.animationProgress,
+            })),
+        }
+        saveWsNet(wsid, net)
+    }
+
+
+
     const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null
     const selectedNodeIcon = selectedNode ? iconMap[selectedNode.iconName] || Layers : null
 
@@ -481,7 +388,7 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl font-semibold">Network Editor</h1>
-                            <Badge variant="outline">{wsid}</Badge>
+                            <Badge variant="outline">{workspace?.name}</Badge>
                             {isConnecting && (
                                 <Badge variant="secondary" className="bg-blue-100 text-blue-800 animate-pulse">
                                     <Link className="w-3 h-3 mr-1"/>
@@ -499,21 +406,17 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                                 {showGrid ? <Eye className="w-4 h-4"/> : <EyeOff className="w-4 h-4"/>}Grid
                             </Button>
                             <Button variant="outline" size="sm" onClick={clearCanvas}>
-                                <RotateCcw className="w-4 h-4 mr-2"/>
-                                Clear
+                                <RotateCcw className="w-4 h-4 mr-2"/>Clear
                             </Button>
                             <Button variant="outline" size="sm" onClick={generateCode}>
-                                <Code className="w-4 h-4 mr-2"/>
-                                Generate Code
+                                <Code className="w-4 h-4 mr-2"/>Generate Code
                             </Button>
                             <Separator orientation="vertical" className="h-6"/>
-                            <Button variant="outline" size="sm">
-                                <Save className="w-4 h-4 mr-2"/>
-                                Save
+                            <Button variant="outline" size="sm" onClick={handelSaveNet}>
+                                <Save className="w-4 h-4 mr-2"/>Save
                             </Button>
                             <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600">
-                                <Play className="w-4 h-4 mr-2"/>
-                                Train Model
+                                <Play className="w-4 h-4 mr-2"/>Train Model
                             </Button>
                         </div>
                     </div>
@@ -539,13 +442,13 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                         <svg className="absolute inset-0" width="100%" height="100%"
                              style={{zIndex: 1, pointerEvents: "none"}}>
                             {/* 现有连接线 */}
-                            {connections.map((connection) => (<ConnectionLine key={connection.id} connection={connection} onDelete={handleConnectionDelete}/>))}
+                            {connections?.map((connection) => (<ConnectionLine key={connection.id} connection={connection} onDelete={handleConnectionDelete}/>))}
                             {/* 临时连接线 */}
                             {isConnecting && connectingFrom && (<TempConnectionLine from={{x: connectingFrom.x, y: connectingFrom.y}} to={mousePosition}/>)}
                         </svg>
 
                         {/* 节点 */}
-                        {nodes.map((node) => (
+                        {nodes?.map((node) => (
                             <LayerNode
                                 key={node.id}
                                 node={node}
@@ -565,42 +468,39 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                             <div className="text-sm space-y-1">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Nodes:</span>
-                                    <span className="font-medium">{nodes.length}</span>
+                                    <span className="font-medium">{nodes?.length}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Connections:</span>
-                                    <span className="font-medium">{connections.length}</span>
+                                    <span className="font-medium">{connections?.length}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Status:</span>
                                     <Badge variant="outline" className="text-xs">
-                                        {isConnecting ? "Connecting" : nodes.length > 0 ? "Ready" : "Empty"}
+                                        {isConnecting ? "Connecting" : nodes?.length > 0 ? "Ready" : "Empty"}
                                     </Badge>
                                 </div>
                             </div>
                         </div>
 
                         {/* 空状态提示 */}
-                        {nodes.length === 0 && (
+                        {nodes?.length === 0 && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-gray-500">
                                     {/*<Brain className="w-16 h-16 mx-auto mb-4 text-gray-300/>*/}
                                     <TorchLabIcon className="w-32 h-32 mx-auto mb-4 text-gray-300"/>
                                     <h3 className="text-xl font-medium mb-2">Start Building Your Network</h3>
                                     <p className="text-sm">Drag layers from the left panel to begin</p>
-                                    <p className="text-xs mt-2 text-gray-400">Click on green dots to create connections
-                                        between layers</p>
+                                    <p className="text-xs mt-2 text-gray-400">Click on green dots to create connections between layers</p>
                                 </div>
                             </div>
                         )}
 
                         {/* 连接提示 */}
                         {isConnecting && (
-                            <div
-                                className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-lg animate-bounce">
+                            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-lg animate-bounce">
                                 <div className="flex items-center gap-2">
-                                    <Link className="w-4 h-4"/>
-                                    <span className="text-sm font-medium">Click on a blue input dot to connect</span>
+                                    <Link className="w-4 h-4"/><span className="text-sm font-medium">Click on a blue input dot to connect</span>
                                 </div>
                             </div>
                         )}
@@ -657,13 +557,13 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Inputs:</span>
                                         <span className="font-medium">
-                      {connections.filter((conn) => conn.to === selectedNode.id && !conn.isDeleting).length}
+                      {connections?.filter((conn) => conn.to === selectedNode.id && !conn.isDeleting).length}
                     </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Outputs:</span>
                                         <span className="font-medium">
-                      {connections.filter((conn) => conn.from === selectedNode.id && !conn.isDeleting).length}
+                      {connections?.filter((conn) => conn.from === selectedNode.id && !conn.isDeleting).length}
                     </span>
                                     </div>
                                 </div>
@@ -705,19 +605,19 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                     <CardContent className="space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span className="text-gray-600">Total Layers:</span>
-                            <span className="font-medium">{nodes.length}</span>
+                            <span className="font-medium">{nodes?.length}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Connections:</span>
-                            <span className="font-medium">{connections.filter((conn) => !conn.isDeleting).length}</span>
+                            <span className="font-medium">{connections?.filter((conn) => !conn.isDeleting).length}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Parameters:</span>
-                            <span className="font-medium">~{(nodes.length * 0.5).toFixed(1)}M</span>
+                            <span className="font-medium">~{(nodes?.length * 0.5).toFixed(1)}M</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Memory:</span>
-                            <span className="font-medium">~{(nodes.length * 2.1).toFixed(1)}MB</span>
+                            <span className="font-medium">~{(nodes?.length * 2.1).toFixed(1)}MB</span>
                         </div>
                     </CardContent>
                 </Card>

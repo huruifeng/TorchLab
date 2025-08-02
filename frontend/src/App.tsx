@@ -3,6 +3,7 @@ import {ThemeProvider, createTheme} from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import HomePage from "./pages/Home"
 import EditorPage from "@/pages/Editor.tsx";
+import {Bounce, ToastContainer} from "react-toastify";
 
 const theme = createTheme({
     palette: {
@@ -58,16 +59,30 @@ const theme = createTheme({
 
 function App() {
     return (
-    <ThemeProvider theme={theme}>
-        <CssBaseline/>
-         <Router>
-            <Routes>
-                <Route path="/" element={<HomePage/>}/>
-                <Route path="/workspace/:wsid" element={<EditorPage />}/>
-            </Routes>
-        </Router>
-    </ThemeProvider>
-)
+
+        <ThemeProvider theme={theme}>
+            <ToastContainer
+                position="top-center"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick={false}
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+                transition={Bounce}
+            />
+            <CssBaseline/>
+            <Router>
+                <Routes>
+                    <Route path="/" element={<HomePage/>}/>
+                    <Route path="/workspace/:wsid" element={<EditorPage/>}/>
+                </Routes>
+            </Router>
+        </ThemeProvider>
+    )
 }
 
 export default App

@@ -1,7 +1,10 @@
+import json
+import os
+import shutil
 from datetime import datetime
 
 import nanoid
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Path, Body
 from backend.db import engine
 from sqlmodel import Session, select
 
@@ -30,6 +33,61 @@ async def get_ws(session: Session = Depends(get_session)):
     except Exception as e:
         print(e)
         return {"success": False, "message": str(e)}
+
+@router.get("/getwsbyid/{id}")
+async def get_ws_byid(id: str, session: Session = Depends(get_session)):
+    """
+    Get a workspace by ID.
+
+    Args:
+        id (str): The ID of the workspace to retrieve.
+
+    Returns:
+        dict: A dictionary containing the success state, a message and the workspace.
+    """
+    try:
+        ws = session.get(Workspace, id)
+        if ws is None:
+            return {"success": False, "message": "Workspace not found."}
+        if os.path.exists("backend/workspaces/" + ws.id + "/net.json"):
+            wsNet = json.load(open("backend/workspaces/" + ws.id + "/net.json"))
+            # print(wsNet)
+        else:
+            wsNet = {"nodes": [], "connections": []}
+
+        return {"success": True, "message": "Workspace fetched successfully.", "workspace": ws, "wsnet": wsNet}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+@router.post("/save_wsnet/{id}")
+async def save_wsnet(id: str = Path(..., description="Workspace ID"),
+                     net: dict = Body(..., description="Network JSON object"),
+                     session: Session = Depends(get_session)):
+    """
+    Save the network object (`net`) to a workspace given by ID.
+    """
+    try:
+        ws = session.get(Workspace, id)
+        if ws is None:
+            return {"success": False, "message": "Workspace not found."}
+
+        ## Create workspace folder
+        if not os.path.exists("backend/workspaces/" + id):
+            os.makedirs("backend/workspaces/" + id)
+
+        ## Save net
+        with open("backend/workspaces/" + id + "/net.json", "w") as f:
+            json.dump(net, f)
+
+        ws.lastModified = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        session.commit()
+
+        return {"success": True, "message": "Workspace net saved successfully."}
+
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
 
 @router.post("/createws")
 async def create_ws(data: Workspace, session: Session = Depends(get_session)):
@@ -72,6 +130,11 @@ async def delete_ws(id: str, session: Session = Depends(get_session)):
             return {"success": False, "message": "Workspace not found."}
         session.delete(ws)
         session.commit()
+
+        ## Delete workspace folder
+        if os.path.exists("backend/workspaces/" + id):
+            shutil.rmtree("backend/workspaces/" + id)
+
         return {"success": True, "message": "Workspace deleted successfully."}
     except Exception as e:
         return {"success": False, "message": str(e)}
@@ -100,6 +163,14 @@ def copy_ws(id: str):
             session.add(new_ws)
             session.commit()
             session.refresh(new_ws)
+
+            ## Copy workspace folder
+            src = "backend/workspaces/" + id
+            dst = "backend/workspaces/" + new_ws.id
+            if os.path.exists(src):
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
 
             return {"success": True, "workspace": new_ws}
     except Exception as e:
