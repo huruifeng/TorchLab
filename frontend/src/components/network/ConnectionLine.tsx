@@ -82,7 +82,7 @@ export const ConnectionLine: React.FC<ConnectionLineProps> = ({connection, onDel
                 strokeWidth={isHovered ? "3" : "2"}
                 fill="none"
                 markerEnd={animationProgress > 0.8 ? `url(#arrowhead-${connection.id})` : "none"}
-                className={`cursor-pointer transition-all duration-200 ${connection.isDeleting ? "opacity-50" : "opacity-100"}`}
+                className={`cursor-pointer transition-all duration-200 opacity-50 tracking-tight text-black bg-slate-400 border-black border-2 text-justify ${connection.isDeleting ? "opacity-50" : "opacity-100"}`}
                 style={{
                     pointerEvents: "stroke",
                     strokeDasharray: connection.isAnimating ? "5,5" : "none",

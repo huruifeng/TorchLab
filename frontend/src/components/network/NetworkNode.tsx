@@ -36,7 +36,7 @@ export const NetworkNode: React.FC<NetworkNodeProps> = ({
 
     const IconComponent = iconMap[node.iconName] || Layers
 
-    // 计算连接点的绝对位置
+    // 计算连接点的绝对位置（画布坐标）
     const inputPoint = {
         x: node.x + node.width / 2,
         y: node.y,

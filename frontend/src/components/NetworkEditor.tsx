@@ -14,20 +14,39 @@ import {iconMap} from "@/lib/icons"
 import {NetworkNode as LayerNode} from "@/components/network/NetworkNode"
 import {ConnectionLine} from "@/components/network/ConnectionLine"
 import {TempConnectionLine} from "@/components/network/TempConnectionLine"
+
+import { Canvas } from "@/components/canvas/Canvas"
+import { CanvasControls } from "@/components/canvas/CanvasControls"
+import { useCanvasTransform } from "@/hooks/useCanvasTransform"
+
 import {useNavigate} from "react-router-dom";
 import {useWorkspaceStore} from "@/store/workspaceStore.ts";
 
 
-export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
+export default function NetworkEditor({wsid}: {wsid: string}) {
 
     const canvasRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
-    // 预设一些节点来展示连接线效果
-    const [nodes, setNodes] = useState<NetworkNode[]>([])
 
-    // 预设一些连接来展示视觉效果
+    // 画布变换控制
+    const {
+        transform,
+        isLocked,
+        isPanning,
+        setIsLocked,
+        zoomCanvas,
+        resetView,
+        fitView,
+        startPan,
+        updatePan,
+        endPan,
+        screenToCanvas,
+    } = useCanvasTransform()
+
     const [workspace, setWorkspace] = useState(null)
+    const [nodes, setNodes] = useState<NetworkNode[]>([])
     const [connections, setConnections] = useState<Connection[]>([])
+
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
     const [showGrid, setShowGrid] = useState(true)
 
@@ -51,6 +70,126 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
     const [connectingFrom, setConnectingFrom] = useState<ConnectionPoint | null>(null)
     const [mousePosition, setMousePosition] = useState({x: 0, y: 0})
 
+    // 画布控制处理函数
+    const handleZoomIn = useCallback(() => {
+        zoomCanvas(1)
+    }, [zoomCanvas])
+
+    const handleZoomOut = useCallback(() => {
+        zoomCanvas(-1)
+    }, [zoomCanvas])
+
+    const handleFitView = useCallback(() => {
+        if (canvasRef.current) {
+            const rect = canvasRef.current.getBoundingClientRect()
+            fitView(nodes, rect.width, rect.height)
+        }
+    }, [fitView, nodes])
+
+    const handleToggleLock = useCallback(() => {
+        setIsLocked(!isLocked)
+    }, [isLocked, setIsLocked])
+
+    // 画布鼠标事件处理
+    const handleCanvasMouseDown = useCallback(
+        (e: React.MouseEvent) => {
+
+            // 检查是否点击在连接点上
+            const target = e.target as HTMLElement
+            if (target.closest("[data-connection-dot]")) {
+                return // 不处理连接点的点击
+            }
+
+            if (e.button === 1 || (e.button === 0 && e.spaceKey)) {
+                // 中键或空格+左键
+                e.preventDefault()
+                startPan(e.clientX, e.clientY)
+                return
+            }
+
+            if (e.button === 0 && !isLocked && !isConnecting) {
+                // 左键拖拽画布
+                const rect = e.currentTarget.getBoundingClientRect()
+                const canvasX = e.clientX - rect.left
+                const canvasY = e.clientY - rect.top
+
+                // 检查是否点击在节点上（但不是连接点）
+                const clickedNode = nodes.find((node) => {
+                    const screenPos = {
+                        x: node.x * transform.scale + transform.x,
+                        y: node.y * transform.scale + transform.y,
+                        width: node.width * transform.scale,
+                        height: node.height * transform.scale,
+                    }
+                    return (
+                        canvasX >= screenPos.x &&
+                        canvasX <= screenPos.x + screenPos.width &&
+                        canvasY >= screenPos.y &&
+                        canvasY <= screenPos.y + screenPos.height
+                    )
+                })
+
+                if (!clickedNode) {
+                    startPan(e.clientX, e.clientY)
+                }
+            }
+        },
+        [startPan, isLocked, isConnecting, nodes, transform],
+    )
+
+    const handleCanvasMouseMove = useCallback(
+        (e: React.MouseEvent) => {
+            // 更新画布拖拽
+            updatePan(e.clientX, e.clientY)
+
+            // 更新连接线鼠标位置 - 使用画布坐标
+            if (isConnecting && canvasRef.current) {
+                const rect = canvasRef.current.getBoundingClientRect()
+                const screenX = e.clientX - rect.left
+                const screenY = e.clientY - rect.top
+
+                // 转换为画布坐标
+                const canvasPos = screenToCanvas(screenX, screenY)
+                setMousePosition(canvasPos)
+            }
+        },
+        [updatePan, isConnecting, screenToCanvas],
+    )
+
+    const handleCanvasMouseUp = useCallback(
+        (e: React.MouseEvent) => {
+            endPan()
+        },
+        [endPan],
+    )
+
+    const handleCanvasWheel = useCallback(
+        (e: React.WheelEvent) => {
+            if (isLocked) return
+
+            e.preventDefault()
+            const rect = e.currentTarget.getBoundingClientRect()
+            const centerX = e.clientX - rect.left
+            const centerY = e.clientY - rect.top
+
+            const delta = e.deltaY > 0 ? -1 : 1
+            zoomCanvas(delta, centerX, centerY)
+        },
+        [isLocked, zoomCanvas],
+    )
+
+    // 点击画布取消连接
+    const handleCanvasClick = useCallback(
+        (e: React.MouseEvent) => {
+            if (isConnecting && e.target === e.currentTarget) {
+                setIsConnecting(false)
+                setConnectingFrom(null)
+            }
+        },
+        [isConnecting],
+    )
+
+
     // 动画连接创建
     const animateConnectionCreation = useCallback((connection: Connection) => {
         const duration = 500 // 动画持续时间
@@ -63,11 +202,7 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
             // 使用缓动函数
             const easeOutCubic = 1 - Math.pow(1 - progress, 3)
 
-            setConnections((prev) =>
-                prev.map((conn) =>
-                    conn.id === connection.id ? {...conn, isAnimating: true, animationProgress: easeOutCubic} : conn,
-                ),
-            )
+            setConnections((prev) => prev.map((conn) => conn.id === connection.id ? {...conn, isAnimating: true, animationProgress: easeOutCubic} : conn,),)
 
             if (progress < 1) {
                 requestAnimationFrame(animate)
@@ -132,15 +267,17 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
 
         const layerData = JSON.parse(event.dataTransfer.getData("application/json"))
 
-        const x = event.clientX - canvasBounds.left - 75 // Center the node
-        const y = event.clientY - canvasBounds.top - 50
+        // 转换屏幕坐标到画布坐标
+        const screenX = event.clientX - canvasBounds.left
+        const screenY = event.clientY - canvasBounds.top
+        const canvasPos = screenToCanvas(screenX, screenY)
 
         const newNode: NetworkNode = {
             id: `${layerData.type}-${Date.now()}`,
             type: layerData.type,
             label: layerData.label,
-            x,
-            y,
+            x: canvasPos.x - 75, // Center the node
+            y: canvasPos.y - 50,
             width: 150,
             height: 100,
             iconName: layerData.iconName,
@@ -151,7 +288,9 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
         }
 
         setNodes((prev) => [...(prev||[]), newNode])
-    }, [])
+        },
+        [screenToCanvas],
+    )
 
 
     const handleNodeDrag = useCallback((id: string, x: number, y: number) => {
@@ -254,30 +393,20 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
         [animateConnectionDeletion],
     )
 
-    // 鼠标移动处理（用于临时连接线）
-    const handleMouseMove = useCallback(
-        (e: React.MouseEvent) => {
-            if (isConnecting && canvasRef.current) {
-                const canvasBounds = canvasRef.current.getBoundingClientRect()
-                setMousePosition({
-                    x: e.clientX - canvasBounds.left,
-                    y: e.clientY - canvasBounds.top,
-                })
-            }
-        },
-        [isConnecting],
-    )
+    // // 鼠标移动处理（用于临时连接线）
+    // const handleMouseMove = useCallback(
+    //     (e: React.MouseEvent) => {
+    //         if (isConnecting && canvasRef.current) {
+    //             const canvasBounds = canvasRef.current.getBoundingClientRect()
+    //             setMousePosition({
+    //                 x: e.clientX - canvasBounds.left,
+    //                 y: e.clientY - canvasBounds.top,
+    //             })
+    //         }
+    //     },
+    //     [isConnecting],
+    // )
 
-    // 点击画布取消连接
-    const handleCanvasClick = useCallback(
-        (e: React.MouseEvent) => {
-            if (isConnecting && e.target === e.currentTarget) {
-                setIsConnecting(false)
-                setConnectingFrom(null)
-            }
-        },
-        [isConnecting],
-    )
 
     const clearCanvas = () => {
         // 先动画删除所有连接
@@ -423,29 +552,39 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                 </div>
 
                 {/* 画布区域 */}
-                <div className="flex-1 relative overflow-hidden">
-                    <div
-                        ref={canvasRef}
-                        className={`w-full h-full relative ${showGrid ? "bg-grid" : "bg-gray-50"} ${
-                            isConnecting ? "cursor-crosshair" : "cursor-default"
-                        }`}
-                        onDragOver={onDragOver}
-                        onDrop={onDrop}
-                        onMouseMove={handleMouseMove}
-                        onClick={handleCanvasClick}
-                        style={{
-                            backgroundImage: showGrid ? "radial-gradient(circle, #cecece 1px, transparent 1px)" : "none",
-                            backgroundSize: showGrid ? "20px 20px" : "auto",
-                        }}
-                    >
-                        {/* SVG 容器用于连接线 */}
-                        <svg className="absolute inset-0" width="100%" height="100%"
-                             style={{zIndex: 1, pointerEvents: "none"}}>
-                            {/* 现有连接线 */}
-                            {connections?.map((connection) => (<ConnectionLine key={connection.id} connection={connection} onDelete={handleConnectionDelete}/>))}
-                            {/* 临时连接线 */}
-                            {isConnecting && connectingFrom && (<TempConnectionLine from={{x: connectingFrom.x, y: connectingFrom.y}} to={mousePosition}/>)}
-                        </svg>
+                 <div className="flex-1 relative overflow-hidden" ref={canvasRef}>
+                     {/* 画布控制器 */}
+                     <CanvasControls
+                         transform={transform}
+                         isLocked={isLocked}
+                         onZoomIn={handleZoomIn}
+                         onZoomOut={handleZoomOut}
+                         onFitView={handleFitView}
+                         onResetView={resetView}
+                         onToggleLock={handleToggleLock}
+                     />
+
+                     <Canvas
+                         transform={transform}
+                         isLocked={isLocked}
+                         isPanning={isPanning}
+                         showGrid={showGrid}
+                         onMouseDown={handleCanvasMouseDown}
+                         onMouseMove={handleCanvasMouseMove}
+                         onMouseUp={handleCanvasMouseUp}
+                         onWheel={handleCanvasWheel}
+                         onClick={handleCanvasClick}
+                         onDragOver={onDragOver}
+                         onDrop={onDrop}
+                         svgContent={
+                             <>
+                                 {/* 现有连接线 */}
+                                 {connections.map((connection) => (<ConnectionLine key={connection.id} connection={connection} onDelete={handleConnectionDelete}/>))}
+                                 {/* 临时连接线 */}
+                                 {isConnecting && connectingFrom && (<TempConnectionLine from={{x: connectingFrom.x, y: connectingFrom.y}} to={mousePosition}/>)}
+                             </>
+                         }
+                     >
 
                         {/* 节点 */}
                         {nodes?.map((node) => (
@@ -504,7 +643,7 @@ export default function NetworkEditor({wsid}: {wsid: string|undefined}) {
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </Canvas>
                 </div>
             </div>
 

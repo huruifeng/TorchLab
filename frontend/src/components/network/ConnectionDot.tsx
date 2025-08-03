@@ -29,6 +29,7 @@ export const ConnectionDot: React.FC<ConnectionDotProps> = ({
 
     const handleMouseDown = (e: React.MouseEvent) => {
         e.stopPropagation()
+        e.preventDefault() // 防止画布拖拽
         if (type === "output" && !isConnecting) {
             onConnectionStart({nodeId, type, x, y})
         }
@@ -36,6 +37,7 @@ export const ConnectionDot: React.FC<ConnectionDotProps> = ({
 
     const handleMouseUp = (e: React.MouseEvent) => {
         e.stopPropagation()
+        e.preventDefault()
         if (type === "input" && isConnecting && canConnect) {
             onConnectionEnd({nodeId, type, x, y})
         }
@@ -53,7 +55,8 @@ export const ConnectionDot: React.FC<ConnectionDotProps> = ({
 
     return (
         <div
-            className={`absolute w-3 h-3 rounded-full border-2 border-white cursor-pointer transition-all duration-200 ${
+            data-connection-dot="true"
+            className={`absolute w-3 h-3 rounded-full border-2 border-white cursor-pointer transition-all duration-200 z-20 ${
                 type === "input"
                     ? `bg-blue-500 -top-2 left-1/2 transform -translate-x-1/2 ${
                         isConnecting && canConnect ? "scale-150 shadow-lg ring-2 ring-blue-300 ring-opacity-50" : ""
@@ -67,6 +70,7 @@ export const ConnectionDot: React.FC<ConnectionDotProps> = ({
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             title={type === "input" ? "Input connection point" : "Output connection point"}
+            style={{pointerEvents: "all"}} // 确保可以接收鼠标事件
         />
     )
 }
