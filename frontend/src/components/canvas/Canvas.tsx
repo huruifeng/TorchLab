@@ -3,6 +3,10 @@
 import type React from "react"
 import {useRef, useCallback, useEffect} from "react"
 import type {CanvasTransform} from "@/types/canvas"
+import TorchLabIcon from "@/components/TorchLabIcon.tsx";
+import {Badge} from "@/components/ui/badge"
+import {Link, Lock} from "lucide-react"
+import type {Connection, NetworkNode} from "@/types/network.ts";
 
 interface CanvasProps {
     transform: CanvasTransform
@@ -18,6 +22,9 @@ interface CanvasProps {
     onDrop: (e: React.DragEvent) => void
     children: React.ReactNode
     svgContent: React.ReactNode // SVG内容
+    nodes: NetworkNode[]
+    connections: Connection[]
+    isConnecting: boolean
 }
 
 export const Canvas: React.FC<CanvasProps> = ({
@@ -34,6 +41,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                                                   onDrop,
                                                   children,
                                                   svgContent, // SVG内容的props
+                                                  nodes,
+                                                  connections,
+                                                  isConnecting,
                                               }) => {
     const canvasRef = useRef<HTMLDivElement>(null)
 
@@ -112,6 +122,57 @@ export const Canvas: React.FC<CanvasProps> = ({
                     {svgContent} {/* SVG内容将通过props传入 */}
                 </svg>
             </div>
+
+            {/* 状态面板 */}
+            <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg border">
+                <div className="text-sm space-y-1">
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Nodes:</span>
+                        <span className="font-medium">{nodes?.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Connections:</span>
+                        <span className="font-medium">{connections?.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <Badge variant="outline" className="text-xs">
+                            {isConnecting ? "Connecting" : nodes?.length > 0 ? "Ready" : "Empty"}
+                        </Badge>
+                    </div>
+                </div>
+            </div>
+            {/* 空状态提示 */}
+            {nodes?.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                        {/*<Brain className="w-16 h-16 mx-auto mb-4 text-gray-300/>*/}
+                        <TorchLabIcon className="w-32 h-32 mx-auto mb-4 text-gray-300"/>
+                        <h3 className="text-xl font-medium mb-2">Start Building Your Network</h3>
+                        <p className="text-sm">Drag layers from the left panel to begin</p>
+                        <p className="text-xs mt-2 text-gray-400">Click on green dots to create connections between
+                            layers</p>
+                    </div>
+                </div>
+            )}
+
+            {/* 连接提示 */}
+            {isConnecting && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-lg animate-bounce">
+                    <div className="flex items-center gap-2">
+                        <Link className="w-4 h-4"/><span className="text-sm font-medium">Release the mouse on a blue input dot to connect</span>
+                    </div>
+                </div>
+            )}
+
+            {/* 锁定指示器 */}
+            {isLocked && (
+                <div className="absolute top-0 left-0 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                    <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4"/>Locked
+                    </div>
+                </div>
+            )}
 
             {/* 缩放指示器 */}
             {transform.scale !== 1 && (

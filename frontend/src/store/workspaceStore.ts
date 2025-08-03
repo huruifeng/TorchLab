@@ -8,7 +8,7 @@ import {toast} from "react-toastify";
 const BASE_URL = 'http://localhost:8000'
 const WS_URL = `${BASE_URL}/workspaces`
 
-interface Workspace {
+export interface Workspace {
     id: string
     name: string
     description: string
@@ -54,7 +54,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()((set) => ({
             const { data } = await axios.post(`${WS_URL}/save_wsnet/${wsId}`, net)
             console.log(data)
             if (data.success) {
-                toast.success('Workspace net saved successfully.')
+                toast.success('Workspace net saved successfully.', {autoClose: 2000})
             }else {
                 toast.error(data.message)
             }

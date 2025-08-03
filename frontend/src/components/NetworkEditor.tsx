@@ -7,8 +7,7 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Badge} from "@/components/ui/badge"
 import {Separator} from "@/components/ui/separator"
 import {Play, Save, Layers, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link, Home} from "lucide-react"
-import TorchLabIcon from "./TorchLabIcon.tsx"
-import type {NetworkNode, Connection, ConnectionPoint} from "@/types/network"
+import type {NetworkNode, Connection, ConnectionPoint, LayerData} from "@/types/network"
 import {layerTypes} from "@/constants/layers"
 import {iconMap} from "@/lib/icons"
 import {NetworkNode as LayerNode} from "@/components/network/NetworkNode"
@@ -20,7 +19,7 @@ import { CanvasControls } from "@/components/canvas/CanvasControls"
 import { useCanvasTransform } from "@/hooks/useCanvasTransform"
 
 import {useNavigate} from "react-router-dom";
-import {useWorkspaceStore} from "@/store/workspaceStore.ts";
+import {useWorkspaceStore, type Workspace} from "@/store/workspaceStore.ts";
 
 
 export default function NetworkEditor({wsid}: {wsid: string}) {
@@ -43,7 +42,7 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
         screenToCanvas,
     } = useCanvasTransform()
 
-    const [workspace, setWorkspace] = useState(null)
+    const [workspace, setWorkspace] = useState<Workspace | null>(null)
     const [nodes, setNodes] = useState<NetworkNode[]>([])
     const [connections, setConnections] = useState<Connection[]>([])
 
@@ -100,8 +99,8 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                 return // 不处理连接点的点击
             }
 
-            if (e.button === 1 || (e.button === 0 && e.spaceKey)) {
-                // 中键或空格+左键
+            if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+                // 中键或 Ctrl+左键
                 e.preventDefault()
                 startPan(e.clientX, e.clientY)
                 return
@@ -158,6 +157,7 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
 
     const handleCanvasMouseUp = useCallback(
         (e: React.MouseEvent) => {
+            updatePan(e.clientX, e.clientY)
             endPan()
         },
         [endPan],
@@ -249,7 +249,7 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
         requestAnimationFrame(animate)
     }, [])
 
-    const onDragStart = (event: React.DragEvent, layerData: any) => {
+    const onDragStart = (event: React.DragEvent, layerData: LayerData) => {
         event.dataTransfer.setData("application/json", JSON.stringify(layerData))
         event.dataTransfer.effectAllowed = "move"
     }
@@ -584,6 +584,9 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                                  {isConnecting && connectingFrom && (<TempConnectionLine from={{x: connectingFrom.x, y: connectingFrom.y}} to={mousePosition}/>)}
                              </>
                          }
+                         nodes={nodes}
+                         connections={connections}
+                         isConnecting={isConnecting}
                      >
 
                         {/* 节点 */}
@@ -601,48 +604,6 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                                 connectingFrom={connectingFrom?.nodeId || null}
                             />
                         ))}
-
-                        {/* 状态面板 */}
-                        <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg border">
-                            <div className="text-sm space-y-1">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Nodes:</span>
-                                    <span className="font-medium">{nodes?.length}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Connections:</span>
-                                    <span className="font-medium">{connections?.length}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Status:</span>
-                                    <Badge variant="outline" className="text-xs">
-                                        {isConnecting ? "Connecting" : nodes?.length > 0 ? "Ready" : "Empty"}
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 空状态提示 */}
-                        {nodes?.length === 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-center text-gray-500">
-                                    {/*<Brain className="w-16 h-16 mx-auto mb-4 text-gray-300/>*/}
-                                    <TorchLabIcon className="w-32 h-32 mx-auto mb-4 text-gray-300"/>
-                                    <h3 className="text-xl font-medium mb-2">Start Building Your Network</h3>
-                                    <p className="text-sm">Drag layers from the left panel to begin</p>
-                                    <p className="text-xs mt-2 text-gray-400">Click on green dots to create connections between layers</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 连接提示 */}
-                        {isConnecting && (
-                            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 px-4 py-2 rounded-lg shadow-lg animate-bounce">
-                                <div className="flex items-center gap-2">
-                                    <Link className="w-4 h-4"/><span className="text-sm font-medium">Click on a blue input dot to connect</span>
-                                </div>
-                            </div>
-                        )}
                     </Canvas>
                 </div>
             </div>
