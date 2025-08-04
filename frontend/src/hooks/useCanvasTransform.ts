@@ -7,7 +7,7 @@ import type {NetworkNode} from "@/types/network"
 const DEFAULT_CONFIG: CanvasConfig = {
     minScale: 0.1,
     maxScale: 3,
-    scaleStep: 0.1,
+    scaleStep: 0.05,
     panSensitivity: 1,
 }
 
