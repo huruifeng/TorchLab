@@ -386,7 +386,7 @@ export default function HomePage() {
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <CardDescription className="mt-0">{ws.description}</CardDescription>
+                                                    <CardDescription className="mt-0">{ws.description.substring(0, 80)}...</CardDescription>
                                                 </div>
                                                 <div className="flex items-center justify-between mb-4">
                                                     <div className="flex space-x-2">

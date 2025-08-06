@@ -6,7 +6,20 @@ import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Badge} from "@/components/ui/badge"
 import {Separator} from "@/components/ui/separator"
-import {Play, Save, Layers, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link, Home} from "lucide-react"
+import {
+    Play,
+    Save,
+    Layers,
+    RotateCcw,
+    Settings,
+    Code,
+    Eye,
+    EyeOff,
+    Trash2,
+    Link,
+    Home,
+    ChevronDownIcon,
+} from "lucide-react"
 import type {NetworkNode, Connection, ConnectionPoint, LayerData} from "@/types/network"
 import {layerTypes} from "@/constants/layers"
 import {iconMap} from "@/lib/icons"
@@ -26,6 +39,25 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
 
     const canvasRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+// Initialize all categories as collapsed by default
+    useEffect(() => {
+        const initialExpandedState = layerTypes.reduce((acc, category) => {
+            acc[category.category] = false;
+            return acc;
+        }, {} as Record<string, boolean>);
+        setExpandedCategories(initialExpandedState);
+    }, [layerTypes]);
+
+    const toggleCategory = (categoryName: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [categoryName]: !prev[categoryName]
+        }));
+    };
 
     // 画布变换控制
     const {
@@ -472,41 +504,75 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                 <div className="p-4">
                     <h2 className="text-lg font-semibold mb-4">Layer Library</h2>
 
-                    {layerTypes.map((category) => (
-                        <div key={category.category} className="mb-6">
-                            <h3 className="text-sm font-medium text-gray-700 mb-3">{category.category}</h3>
-                            <div className="space-y-2">
-                                {category.layers.map((layer) => {
-                                    const LayerIcon = iconMap[layer.iconName] || Layers
-                                    return (
-                                        <Card
-                                            key={layer.type}
-                                            className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 hover:scale-105 py-0"
-                                            draggable
-                                            onDragStart={(event) => onDragStart(event, layer)}
-                                        >
-                                            <CardContent className="p-3">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <LayerIcon className={`w-4 h-4 ${layer.color}`}/>
-                                                    <span className="font-medium text-sm">{layer.label}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-600">
-                                                    {layer.inputShape} → {layer.outputShape}
-                                                </div>
-                                                {Object.keys(layer.params).length > 0 && (
-                                                    <div className="mt-2">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {Object.keys(layer.params).length} params
-                                                        </Badge>
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    )
-                                })}
+                    {/* Search input */}
+                    <div className="mb-4">
+                        <input
+                            type="text"
+                            placeholder="Search layers..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    {layerTypes.map((category) => {
+                        // Filter layers based on search query
+                        const filteredLayers = category.layers.filter(layer =>
+                            layer.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            layer.type.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+
+                        // Skip the category if no layers match the search and there's a search query
+                        if (filteredLayers.length === 0 && searchQuery) return null;
+
+                        return (
+                            <div key={category.category} className="mb-4">
+                                <button
+                                    className="flex items-center justify-between w-full text-sm font-medium text-gray-700 mb-2 focus:outline-none"
+                                    onClick={() => toggleCategory(category.category)}
+                                >
+                                    <span>{category.category}</span>
+                                    <ChevronDownIcon
+                                        className={`w-4 h-4 transition-transform duration-200 ${
+                                            expandedCategories[category.category] ? 'rotate-0' : '-rotate-90'
+                                        }`}
+                                    />
+                                </button>
+
+                                {expandedCategories[category.category] && (
+                                    <div className="space-y-2">
+                                        {filteredLayers.map((layer) => {
+                                            const LayerIcon = iconMap[layer.iconName] || Layers;
+                                            return (
+                                                <Card
+                                                    key={layer.type}
+                                                    className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 hover:scale-105 py-0"
+                                                    draggable
+                                                    onDragStart={(event) => onDragStart(event, layer)}
+                                                >
+                                                    <CardContent className="p-3">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <LayerIcon className={`w-4 h-4 ${layer.color}`}/>
+                                                            <span className="font-medium text-sm">{layer.label}</span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">
+                                                            {layer.inputShape} → {layer.outputShape}
+                                                        </div>
+                                                        {Object.keys(layer.params).length > 0 && (
+                                                            <div className="mt-2">
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {Object.keys(layer.params).length} params
+                                                                </Badge>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
