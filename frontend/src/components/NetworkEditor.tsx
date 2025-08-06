@@ -43,6 +43,7 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
+
 // Initialize all categories as collapsed by default
     useEffect(() => {
         const initialExpandedState = layerTypes.reduce((acc, category) => {
@@ -334,14 +335,14 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                 if (conn.from === id) {
                     return {
                         ...conn,
-                        fromX: x + 75, // Center of node
-                        fromY: y + 100, // Bottom of node
+                        fromX: x + 70, // Center of node
+                        fromY: y + 86, // Bottom of node
                     }
                 }
                 if (conn.to === id) {
                     return {
                         ...conn,
-                        toX: x + 75, // Center of node
+                        toX: x + 70, // Center of node
                         toY: y, // Top of node
                     }
                 }

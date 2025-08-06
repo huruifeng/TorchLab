@@ -89,7 +89,7 @@ export const NetworkNode: React.FC<NetworkNodeProps> = ({
 
     return (
         <div
-            className={`absolute px-4 py-1 shadow-md rounded-lg bg-white border-2 min-w-[150px] select-none group transition-all duration-200 ${
+            className={`absolute px-4 py-1 shadow-md rounded-lg bg-white border-2 min-w-[140px] select-none group transition-all duration-200 ${
                 selected ? "border-blue-500 shadow-lg" : "border-gray-200"
             } ${isDragging ? "z-50 scale-105" : "z-10"} ${!isConnecting ? "cursor-move" : "cursor-default"} ${
                 isConnecting && canConnectToInput ? "ring-2 ring-blue-300 ring-opacity-50 shadow-lg" : ""
