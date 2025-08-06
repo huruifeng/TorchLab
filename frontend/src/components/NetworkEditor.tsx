@@ -523,6 +523,8 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                 : node
         ));
         setEditingParam(null);
+
+        handelSaveNet();
     };
 
 
