@@ -352,16 +352,15 @@ export default function HomePage() {
                                 </Dialog>
 
                                 {/* Workspaces Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                     {workspaces.map((ws) => (
-                                        <Card key={ws.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
-                                            <CardHeader className="pb-3">
+                                        <Card key={ws.id} className="hover:shadow-lg transition-shadow cursor-pointer group gap-0">
+                                            <CardHeader className="pb-0">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
                                                         <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
                                                             {ws.name}
                                                         </CardTitle>
-                                                        <CardDescription className="mt-1">{ws.description}</CardDescription>
                                                     </div>
                                                     <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button variant="ghost" size="sm"
@@ -386,6 +385,9 @@ export default function HomePage() {
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <CardDescription className="mt-0">{ws.description}</CardDescription>
+                                                </div>
                                                 <div className="flex items-center justify-between mb-4">
                                                     <div className="flex space-x-2">
                                                         <Badge variant={getModelTypeVariant(ws.modelType)}>{ws.modelType}</Badge>
