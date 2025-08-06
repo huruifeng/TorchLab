@@ -308,10 +308,10 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
             id: `${layerData.type}-${Date.now()}`,
             type: layerData.type,
             label: layerData.label,
-            x: canvasPos.x - 75, // Center the node
-            y: canvasPos.y - 50,
-            width: 150,
-            height: 100,
+            x: canvasPos.x - 70, // Center the node
+            y: canvasPos.y - 43,
+            width: 140,
+            height: 86,
             iconName: layerData.iconName,
             color: layerData.color,
             params: layerData.params,
@@ -500,7 +500,7 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
     return (
         <div className="flex h-screen bg-gray-50">
             {/* 左侧工具栏 */}
-            <div className="w-80 min-w-80 bg-white border-r border-gray-200 overflow-y-auto">
+            <div className="w-64 min-w-60 bg-white border-r border-gray-200 overflow-y-auto">
                 <div className="p-4">
                     <h2 className="text-lg font-semibold mb-4">Layer Library</h2>
 
