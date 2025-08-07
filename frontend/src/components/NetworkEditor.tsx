@@ -4,9 +4,23 @@ import React, {useEffect} from "react"
 import {useCallback, useRef, useState} from "react"
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch";
 import {Badge} from "@/components/ui/badge"
 import {Separator} from "@/components/ui/separator"
-import {Play, Save, Layers, RotateCcw, Settings, Code, Eye, EyeOff, Trash2, Link, Home} from "lucide-react"
+import {
+    Play,
+    Save,
+    Layers,
+    RotateCcw,
+    Settings,
+    Code,
+    Eye,
+    EyeOff,
+    Trash2,
+    Link,
+    Home,
+    ChevronDownIcon,
+} from "lucide-react"
 import type {NetworkNode, Connection, ConnectionPoint, LayerData} from "@/types/network"
 import {layerTypes} from "@/constants/layers"
 import {iconMap} from "@/lib/icons"
@@ -26,6 +40,29 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
 
     const canvasRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+    // Add this state at the top of your component
+    const [editingParam, setEditingParam] = useState<string | null>(null);
+    const [editedParams, setEditedParams] = useState<Record<string, any>>({});
+
+// Initialize all categories as collapsed by default
+    useEffect(() => {
+        const initialExpandedState = layerTypes.reduce((acc, category) => {
+            acc[category.category] = false;
+            return acc;
+        }, {} as Record<string, boolean>);
+        setExpandedCategories(initialExpandedState);
+    }, [layerTypes]);
+
+    const toggleCategory = (categoryName: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [categoryName]: !prev[categoryName]
+        }));
+    };
 
     // 画布变换控制
     const {
@@ -276,10 +313,10 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
             id: `${layerData.type}-${Date.now()}`,
             type: layerData.type,
             label: layerData.label,
-            x: canvasPos.x - 75, // Center the node
-            y: canvasPos.y - 50,
-            width: 150,
-            height: 100,
+            x: canvasPos.x - 70, // Center the node
+            y: canvasPos.y - 43,
+            width: 140,
+            height: 86,
             iconName: layerData.iconName,
             color: layerData.color,
             params: layerData.params,
@@ -302,14 +339,14 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                 if (conn.from === id) {
                     return {
                         ...conn,
-                        fromX: x + 75, // Center of node
-                        fromY: y + 100, // Bottom of node
+                        fromX: x + 70, // Center of node
+                        fromY: y + 86, // Bottom of node
                     }
                 }
                 if (conn.to === id) {
                     return {
                         ...conn,
-                        toX: x + 75, // Center of node
+                        toX: x + 70, // Center of node
                         toY: y, // Top of node
                     }
                 }
@@ -460,53 +497,113 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
         saveWsNet(wsid, net)
     }
 
-
-
     const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null
     const selectedNodeIcon = selectedNode ? iconMap[selectedNode.iconName] || Layers : null
+
+    useEffect(() => {
+      if (selectedNode) {
+        setEditedParams({...selectedNode.params});
+      }
+    }, [selectedNode]);
+
+    // Add this handler to update node parameters
+    const handleParamChange = (paramName: string, value: any) => {
+        setEditedParams(prev => ({
+            ...prev,
+            [paramName]: value
+        }));
+    };
+
+    const saveParams = () => {
+        if (!selectedNodeId) return;
+
+        setNodes(prev => prev.map(node =>
+            node.id === selectedNodeId
+                ? {...node, params: {...editedParams}}
+                : node
+        ));
+        setEditingParam(null);
+
+        handelSaveNet();
+    };
+
 
     return (
         <div className="flex h-screen bg-gray-50">
             {/* 左侧工具栏 */}
-            <div className="w-80 min-w-80 bg-white border-r border-gray-200 overflow-y-auto">
+            <div className="w-64 min-w-60 bg-white border-r border-gray-200 overflow-y-auto">
                 <div className="p-4">
                     <h2 className="text-lg font-semibold mb-4">Layer Library</h2>
 
-                    {layerTypes.map((category) => (
-                        <div key={category.category} className="mb-6">
-                            <h3 className="text-sm font-medium text-gray-700 mb-3">{category.category}</h3>
-                            <div className="space-y-2">
-                                {category.layers.map((layer) => {
-                                    const LayerIcon = iconMap[layer.iconName] || Layers
-                                    return (
-                                        <Card
-                                            key={layer.type}
-                                            className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 hover:scale-105 py-0"
-                                            draggable
-                                            onDragStart={(event) => onDragStart(event, layer)}
-                                        >
-                                            <CardContent className="p-3">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <LayerIcon className={`w-4 h-4 ${layer.color}`}/>
-                                                    <span className="font-medium text-sm">{layer.label}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-600">
-                                                    {layer.inputShape} → {layer.outputShape}
-                                                </div>
-                                                {Object.keys(layer.params).length > 0 && (
-                                                    <div className="mt-2">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {Object.keys(layer.params).length} params
-                                                        </Badge>
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    )
-                                })}
+                    {/* Search input */}
+                    <div className="mb-4">
+                        <input
+                            type="text"
+                            placeholder="Search layers..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    {layerTypes.map((category) => {
+                        // Filter layers based on search query
+                        const filteredLayers = category.layers.filter(layer =>
+                            layer.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            layer.type.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+
+                        // Skip the category if no layers match the search and there's a search query
+                        if (filteredLayers.length === 0 && searchQuery) return null;
+
+                        return (
+                            <div key={category.category} className="mb-4">
+                                <button
+                                    className="flex items-center justify-between w-full text-sm font-medium text-gray-700 mb-2 focus:outline-none"
+                                    onClick={() => toggleCategory(category.category)}
+                                >
+                                    <span>{category.category}</span>
+                                    <ChevronDownIcon
+                                        className={`w-4 h-4 transition-transform duration-200 ${
+                                            expandedCategories[category.category] ? 'rotate-0' : '-rotate-90'
+                                        }`}
+                                    />
+                                </button>
+
+                                {expandedCategories[category.category] && (
+                                    <div className="space-y-2">
+                                        {filteredLayers.map((layer) => {
+                                            const LayerIcon = iconMap[layer.iconName] || Layers;
+                                            return (
+                                                <Card
+                                                    key={layer.type}
+                                                    className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 hover:scale-105 py-0"
+                                                    draggable
+                                                    onDragStart={(event) => onDragStart(event, layer)}
+                                                >
+                                                    <CardContent className="p-3">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <LayerIcon className={`w-4 h-4 ${layer.color}`}/>
+                                                            <span className="font-medium text-sm">{layer.label}</span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">
+                                                            {layer.inputShape} → {layer.outputShape}
+                                                        </div>
+                                                        {Object.keys(layer.params).length > 0 && (
+                                                            <div className="mt-2">
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {Object.keys(layer.params).length} params
+                                                                </Badge>
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -636,19 +733,78 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                                 <p className="text-sm text-gray-600 font-mono">{selectedNode.outputShape}</p>
                             </div>
 
-                            {Object.keys(selectedNode.params).length > 0 && (
-                                <div>
-                                    <label className="text-sm font-medium">Parameters</label>
-                                    <div className="space-y-2 mt-2">
-                                        {Object.entries(selectedNode.params).map(([key, value]) => (
-                                            <div key={key} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{key}:</span>
-                                                <span className="font-mono">{String(value)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                            {Object.entries(selectedNode.params).map(([key, value]) => (
+                                <div key={key} className="flex justify-between items-center text-sm py-1">
+                                    <span className="text-gray-600">{key}:</span>
+                                    {editingParam === key ? (
+                                        <div className="flex items-center gap-2">
+                                            {typeof value === 'boolean' ? (
+                                                <Switch
+                                                    checked={editedParams[key]}
+                                                    onCheckedChange={(val) => handleParamChange(key, val)}
+                                                />
+                                            ) : typeof value === 'number' ? (
+                                                <input
+                                                    type="number"
+                                                    value={editedParams[key]}
+                                                    onChange={(e) => handleParamChange(key, Number(e.target.value))}
+                                                    className="border rounded px-2 py-1 text-xs w-24"
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    value={editedParams[key]}
+                                                    onChange={(e) => handleParamChange(key, e.target.value)}
+                                                    className="border rounded px-2 py-1 text-xs w-24"
+                                                    autoFocus
+                                                />
+                                            )}
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={saveParams}>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="12"
+                                                    height="12"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                >
+                                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                                    <path d="M17 21v-8H7v8"/>
+                                                    <path d="M7 3v5h8"/>
+                                                </svg>
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono">
+                                              {typeof value === 'boolean' ? (value ? 'True' : 'False') : (String(value))}
+                                            </span>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6"
+                                                onClick={() => setEditingParam(key)}
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="12"
+                                                    height="12"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                >
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                </svg>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            ))}
 
                             {/* 连接信息 */}
                             <div>
