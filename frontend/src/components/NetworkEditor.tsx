@@ -846,8 +846,7 @@ export default function NetworkEditor({wsid}: {wsid: string}) {
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg animate-pulse">
                                 <Link className="w-8 h-8 mx-auto mb-2 text-blue-500"/>
                                 <p className="text-sm text-blue-700">Connection Mode Active</p>
-                                <p className="text-xs text-blue-600 mt-1">Click on a blue input dot to complete the
-                                    connection</p>
+                                <p className="text-xs text-blue-600 mt-1">Click on a blue input dot to complete the connection</p>
                             </div>
                         )}
                     </div>

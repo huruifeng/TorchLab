@@ -4,7 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/frontend/.idea" />
     </content>
-    <orderEntry type="jdk" jdkName="TorchLab" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="torchlab" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
