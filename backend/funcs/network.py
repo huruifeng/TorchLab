@@ -179,7 +179,8 @@ def generate_script(json_file: str, output_file: str = None) -> str:
     if len(output_layers) == 1:
         forward_def.append(f"        return {tensor_tracker[output_layers[0]]}")
     elif len(output_layers) > 1:
-        forward_def.append("        return {" + f"{', '.join([f'{layer}: {tensor_tracker[layer]}' for layer in output_layers])}" + "}")
+        results_str = ", ".join([f"'{layer}': {tensor_tracker[layer]}" for layer in output_layers])
+        forward_def.append("        return {" + results_str + "}")
     else:
         forward_def.append("        return x")
 

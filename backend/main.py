@@ -19,7 +19,7 @@ app.add_event_handler("startup", create_db_and_tables)
 
 @app.get("/")
 async def root():
-    return "Hello, Welcome to TorchLab!"
+    return {"message":  "Hello, Welcome to TorchLab!"}
 
 app.include_router(ws_routes.router, prefix="/workspaces")
 

@@ -18,6 +18,11 @@ export default defineConfig(({mode})=>{
         build: {
             outDir: "./dist",
         },
+        test: {
+            globals: true,
+            environment: "jsdom",
+            setupFiles: "./src/__tests__/setupTests.ts",
+        },
         server: {
             host: "0.0.0.0",
             // Use loadEnv to access environment variables inside Vite config

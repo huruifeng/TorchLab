@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/")
 async def ws_root():
-    return {"Message": "Hello Workspace."}
+    return {"Message": "Hello TorchLab Workspaces."}
 
 @router.get("/getws")
 async def get_ws(session: Session = Depends(get_session)):
