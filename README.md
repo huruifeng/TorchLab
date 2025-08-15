@@ -131,7 +131,8 @@ npm test
 ```
 
 ## Example pages
-* [**Live Demo (Only frontend)**](https://huruifeng.github.io/TorchLab/)
+
+[//]: # (* [**Live Demo &#40;Only frontend&#41;**]&#40;https://huruifeng.github.io/TorchLab/&#41;)
 * ### Dashboard page: ![**Dashboard page**](docs/TorchLab_Dashboard.png)
 * ### NetEditor page: ![**NetEditor page**](docs/TorchLab_NetEditor.png)
 
