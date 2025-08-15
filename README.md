@@ -132,8 +132,8 @@ npm test
 
 ## Example pages
 * [**Live Demo (Only frontend)**](https://huruifeng.github.io/TorchLab/)
-* ### Dashboard page: ![**Dashboard page**](examples/TorchLab_Dashboard.png)
-* ### NetEditor page: ![**NetEditor page**](examples/TorchLab_NetEditor.png)
+* ### Dashboard page: ![**Dashboard page**](docs/TorchLab_Dashboard.png)
+* ### NetEditor page: ![**NetEditor page**](docs/TorchLab_NetEditor.png)
 
 ## Contributing
 1. Fork the repo & create your feature branch (`git checkout -b feature/my-awesome-feature`).
