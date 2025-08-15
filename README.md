@@ -14,8 +14,9 @@ TorchLab is an interactive platform for designing, training and evaluating deep-
 5. [Running the App Locally](#running-the-app-locally)
 6. [Scripts & Tasks](#scripts--tasks)
 7. [Testing](#testing)
-8. [Contributing](#contributing)
-9. [License](#license)
+8. [Example pages](#example-pages)
+9. [Contributing](#contributing)
+10. [License](#license)
 
 ---
 
@@ -128,6 +129,11 @@ pytest -q
 # frontend
 npm test
 ```
+
+## Example pages
+* [**Live Demo (Only frontend)**](https://huruifeng.github.io/TorchLab/)
+* ### Dashboard page: ![**Dashboard page**](examples/TorchLab_Dashboard.png)
+* ### NetEditor page: ![**NetEditor page**](examples/TorchLab_NetEditor.png)
 
 ## Contributing
 1. Fork the repo & create your feature branch (`git checkout -b feature/my-awesome-feature`).

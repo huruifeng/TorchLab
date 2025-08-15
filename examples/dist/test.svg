@@ -1,0 +1,18 @@
+<svg class="absolute inset-0" style="z-index: 1; pointer-events: none;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" >
+        <defs>
+            <marker id="arrowhead-conn-1754008904790" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" class="transition-colors duration-200"></polygon>
+            </marker>
+            <linearGradient id="flow-gradient-conn-1754008904790" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="transparent"></stop>
+                <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.6"></stop>
+                <stop offset="100%" stop-color="transparent"></stop>
+                <animateTransform attributeName="gradientTransform" type="translate" values="-100 0;100 0;-100 0" dur="2s" repeatCount="indefinite"></animateTransform>
+            </linearGradient>
+        </defs>
+        <path d="M 927 428.1999969482422 Q 1213 505.6999969482422 1499 583.1999969482422" stroke="#6b7280"
+              stroke-width="2" fill="#00ff00" marker-end="url(#arrowhead-conn-1754008904790)"
+              class="cursor-pointer transition-all duration-200 opacity-100"></path>
+        <path d="M 927 428.1999969482422 Q 1213 505.6999969482422 1499 583.1999969482422" stroke="url(#flow-gradient-conn-1754008904790)" stroke-width="2" fill="#ff0000" class="pointer-events-none"></path>
+        <circle cx="1213" cy="505.6999969482422" r="8" fill="#ff0000" stroke="#6b7280" stroke-width="10" class="cursor-pointer transition-all duration-200" style="pointer-events: all;"></circle>
+</svg>
